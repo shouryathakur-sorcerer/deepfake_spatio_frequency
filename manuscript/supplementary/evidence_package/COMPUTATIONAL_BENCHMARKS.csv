@@ -1,0 +1,21 @@
+model,parameter_count,batch_size,measurement_type,latency_ms,throughput_img_per_sec,peak_memory_mb,device,source_path
+spatial_only (B1),21857577,1,Inference Latency,4.52,221.2,420.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+spatial_only (B1),21857577,64,Inference Batched Latency,177.82,359.9,1850.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+spatial_only (B1),21857577,32,Training Forward-Backward Step,148.28,215.8,3246.24,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+frequency_only (B2),511873,1,Inference Latency,2.37,421.9,110.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+frequency_only (B2),511873,64,Inference Batched Latency,95.0,673.7,150.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+frequency_only (B2),511873,32,Training Forward-Backward Step,84.44,378.9,191.34,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+naive_concat (B3),22894761,1,Inference Latency,6.68,149.7,435.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+naive_concat (B3),22894761,64,Inference Batched Latency,279.96,228.6,1910.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+naive_concat (B3),22894761,32,Training Forward-Backward Step,208.42,153.5,3301.35,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+fft_baseline (B4),1814977,1,Inference Latency,0.86,1162.8,120.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+fft_baseline (B4),1814977,64,Inference Batched Latency,25.6,2500.5,260.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+fft_baseline (B4),1814977,32,Training Forward-Backward Step,31.28,1023.0,406.26,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+parallel_se (Proposed DualBranch),23025833,1,Inference Latency,6.48,154.3,440.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+parallel_se (Proposed DualBranch),23025833,64,Inference Batched Latency,267.36,239.4,1920.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+parallel_se (Proposed DualBranch),23025833,32,Training Forward-Backward Step,207.43,154.3,3300.17,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+cross_gated (CrossGatedFusion),23157161,1,Inference Latency,6.5,153.8,442.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+cross_gated (CrossGatedFusion),23157161,64,Inference Batched Latency,277.15,230.9,1930.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),scratch_inference_benchmark.py
+cross_gated (CrossGatedFusion),23157161,32,Training Forward-Backward Step,214.37,149.3,3296.04,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),eval_results/controlled/summary_controlled_experiments.json
+Ref_ParallelSE_100k,23025833,64,Full-Scale Training Step (AMP),339.66,163.2,5752.2,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),Thesis_Dossier_Deepfake_Spatio_Frequency.md
+DifferentiableWPD2D vs PyWavelets,0,32,Wavelet Decomposition Speedup,0.94,1063.8,15.0,NVIDIA GeForce RTX 4060 Laptop GPU (8GB VRAM),tests/test_differentiable_wpd.py (+45.9% end-to-end training throughput boost vs CPU pywt)

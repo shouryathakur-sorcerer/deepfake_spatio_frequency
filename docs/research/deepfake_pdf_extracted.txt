@@ -1,0 +1,550 @@
+PAGE 1:
+Spatial–Frequency Deepfake Image Classification with
+Wavelet-Packet Features and Bidirectional
+Cross-Attention
+Abstract
+Reliable deepfake image detection under lossy compression and generator shift remains
+challenging. This study describes an image-level binary classifier combining an ImageNet-
+pretrained Xception spatial branch with a differentiable three-level Daubechies-4 wavelet-
+packet decomposition (WPD) branch, a learnable high-frequency enhancement (HiFE) module,
+and bidirectional dual cross-attention (DCA) fusion. The image-level experiment uses a
+140,000-image real-versus-synthetic face collection identified as FFHQ versus StyleGAN2,
+partitioned into 100,000 training, 20,000 validation, and 20,000 test images with balanced
+classes. The reported ROC-AUC point estimates are 0.937 at JPEG quality 50 and 0.888
+at JPEG quality 23. Implementation testing reports 13 successful architecture tests and six
+successful differentiable-WPD tests on an NVIDIA RTX 4060 Laptop GPU using PyTorch
+2.6.0 and CUDA 12.4. Matched per-variant ablation metrics, repeated-seed uncertainty
+estimates, numeric cross-generator results, and native FaceForensics++ video results are
+not reported here. The findings therefore characterize initial JPEG behavior on one image
+collection and do not establish independent gains from WPD, HiFE, or DCA, or generalization
+to video domains.
+Keywords:deepfake detection; digital image forensics; wavelet-packet decomposition; JPEG
+robustness; spatial-frequency fusion; cross-generator evaluation; reproducibility.
+1 Introduction
+The increasing realism of manipulated and synthesized facial media creates challenges for digital
+trust, identity verification, and forensic analysis. Deep-learning detectors have been developed
+to identify such content from spatial appearance, frequency statistics, temporal inconsistencies,
+and combinations of these cues. FaceForensics++ established a widely used benchmark for
+manipulated facial videos and highlighted the importance of evaluating detectors under different
+compression conditions [1]. Xception-based convolutional detectors are also common baselines
+for facial manipulation detection, in part because their depthwise-separable convolutions provide
+expressive spatial features at a practical computational cost [2].
+A key challenge is that performance on a held-out split from one dataset does not necessarily
+imply robustness to changes in generator, source domain, codec, or post-processing. Frequency-
+domain methods exploit artifacts that may be difficult to identify from RGB appearance alone.
+Franket al.investigated frequency analysis for recognizing GAN-generated images, while Qianet
+al.introduced a frequency-aware framework for face forgery detection [3,4]. However, frequency
+features can also encode generator-specific or dataset-specific shortcuts; recent work on frequency
+debiasing explicitly examines this concern [5].
+Wavelet-packet decomposition has previously been studied for deepfake image analysis [6];
+wavelet-packet filter-bank methods are grounded in multiresolution and best-basis analysis [7,8].
+Later research has explored content-guided spatial-frequency reasoning, adaptive fusion, and
+high-frequency enhancement for compressed content [9–11]. Therefore, this paper does not claim
+1
+--- PAGE ---
+PAGE 2:
+that WPD, frequency-domain analysis, or adaptive spatial-frequency fusion is novel by itself.
+Instead, it asks whether a particular combination of a three-level db4 WPD representation,
+a learnable enhancement block, and cross-attention fusion provides a measurable incremental
+benefit under controlled training conditions.
+The central research question is:
+Under matched data splits and optimization budgets, does the proposed WPD-enhanced
+spatio-frequency detector improve detection under compression and domain shift
+beyond the benefits attributable to compression-aware augmentation alone?
+The study is organized around five testable hypotheses:
+• H1:Compression-aware augmentation improves detection under the tested degradation
+conditions.
+• H2:WPD contributes an incremental benefit over a spatial-only baseline when training
+conditions are matched.
+•H3:HiFE contributes measurable benefit beyond the same model without enhancement.
+• H4:DCA provides measurable benefit over simple concatenation under a comparable training
+protocol.
+• H5:Any observed in-domain improvements persist, at least partly, under external-dataset or
+unseen-generator evaluation.
+These hypotheses are empirical. None is considered supported until the corresponding
+experiment has been run and its uncertainty reported.
+The paper makes the following intended contributions. First, it specifies a reproducible dual-
+branch design in which spatial appearance and wavelet-packet features are processed separately
+and then fused. Second, it defines matched component ablations to isolate the effects of WPD,
+HiFE, DCA, and compression-aware augmentation. Third, it establishes an evaluation protocol
+that separates native FaceForensics++ video compression from additional JPEG transformations
+and includes external-domain testing. Fourth, it requires reproducible data manifests, repeated
+seeds, calibrated operating points, and test procedures whose outputs are derived from actual
+experimental runs.
+The completed empirical scope is limited to the 140k real/fake face collection identified as
+FFHQ versus StyleGAN2 and evaluated under JPEG image recompression. Two quantitative
+AUC values are available; the GAN-to-diffusion transfer experiment is described only qualitatively
+and lacks sample counts, generator details, and uncertainty estimates. Native FaceForensics++
+video evaluation and complete component-wise ablations remain outstanding. The attention
+module operates at the spatial-frequency fusion stage rather than applying attention directly to
+individual wavelet packets.
+2 Related Work
+2.1 Spatial-Domain Detection
+Spatial detectors learn discriminative patterns from RGB pixels. Xception uses depthwise-
+separable convolutions to model spatial and channel relationships efficiently [2]. The Face-
+2
+--- PAGE ---
+PAGE 3:
+Forensics++ benchmark provides a common setting for evaluating facial manipulation detectors
+under different compression conditions [1]. While spatial representations are strong baselines,
+their results should be interpreted in the context of the dataset, manipulation methods, and
+compression pipeline used for evaluation. Generalization must be measured rather than inferred
+from within-dataset performance.
+2.2 Frequency-Domain Forensics
+Frequency representations can reveal irregularities associated with image synthesis and upsam-
+pling. Franket al.studied frequency analysis for deep fake image recognition [3]. Qianet al.
+proposed F3-Net, which combines frequency-aware decomposed image components with local
+frequency statistics [4]. These studies demonstrate that frequency information is an established
+direction in forgery analysis; consequently, using a frequency transform alone is not a sufficient
+novelty claim.
+2.3 Wavelets and Wavelet-Packet Decomposition
+Wolteret al.introduced wavelet-packet analysis for deepfake image detection and examined
+its use for spatial-frequency forensic features [6]. A conventional discrete wavelet transform
+recursively decomposes the low-frequency approximation branch, while a wavelet-packet trans-
+form recursively decomposes low- and high-frequency nodes. This provides a more complete
+multiresolution partition of the signal, but the usefulness of a representation still depends on the
+task, implementation, and evaluation protocol. This work investigates a differentiable db4 WPD
+implementation as a component of a larger detector; it does not claim to introduce WPD for
+deepfake detection.
+2.4 Spatial-Frequency Fusion and High-Frequency Enhancement
+Research has explored interaction between spatial content and frequency clues. Wanget al.
+proposed content-guided spatial-frequency relation reasoning with dynamic graph learning [9].
+Wanget al.later investigated adaptive fusion of spatial-frequency features [10]. Gaoet al.studied
+a high-frequency enhancement network for highly compressed deepfake content [11]. These works
+overlap conceptually with the motivation for combining spatial features, frequency information,
+and learnable feature weighting. The present study therefore needs controlled experiments to
+establish what, if anything, is added by its particular combination of WPD, HiFE, and DCA.
+2.5 Generalization and In-the-Wild Evaluation
+FreqDebias identifies the risk that deepfake detectors may over-rely on selected frequency bands
+associated with particular forgery types, motivating explicit analysis of spectral bias and cross-
+domain performance [5]. The 2026 WGN work also investigates wavelet-guided spatial attention,
+compression, and external-dataset generalization [12]. Deepfake-Eval-2024 provides a recent
+in-the-wild benchmark assembled from media circulated in 2024, illustrating the importance
+of moving beyond academic test conditions [13]. These studies raise the bar for a convincing
+evaluation: testing only one real-image source, one synthetic generator, or a few quality settings
+is insufficient for broad deployment claims.
+3
+--- PAGE ---
+PAGE 4:
+2.6 Research Gap
+Prior work has separately established the relevance of spatial detectors, frequency-based cues,
+WPD, feature fusion, and high-frequency enhancement. The remaining question for this project
+is narrower: whether the selected combination provides benefits that remain after controlling for
+augmentation, training budget, and data distribution. This is particularly important because a
+full model trained with more data or more optimization steps cannot be fairly compared with
+a smaller baseline trained under a weaker protocol. The study therefore prioritizes matched
+ablations, dense compression evaluation, external-domain testing, and uncertainty estimates over
+a claim of novelty based only on the architecture.
+3 Problem Formulation
+Let an input facial image or extracted video frame be represented byX∈ [0, 1]H×W×3. A sample
+may have undergone an unknown sequence of compression or post-processing transformations.
+The detector estimates
+pθ(y= 1|X) =σ
+(︁
+fθ(X)
+)︁
+,(1)
+where y = 1denotes manipulated content,y = 0denotes authentic content,fθ is the model logit,
+andσ(·)is the sigmoid function. The task is image-level binary classification. The implementation
+has no segmentation decoder or pixel-mask supervision; consequently, Grad-CAM or attention
+maps are used only for qualitative feature inspection and are not interpreted as pixel-level
+localization measurements.
+The goal is not merely to maximize performance on one test split, but to quantify changes
+across source compression conditions and independent datasets. The primary comparisons should
+use the same source samples, preprocessing, training budget, and validation-based model selection
+wherever possible.
+4 Proposed Method
+4.1 Overview
+The proposed framework contains two branches. The spatial stream encodes RGB appearance
+using Xception features [2]. The frequency stream converts the image to luminance, applies a
+three-level db4 WPD, and processes the resulting packet maps with a learnable enhancement
+block. A dual cross-attention module then allows the two streams to exchange information before
+binary classification. Fig. 1 summarizes the data flow.
+4.2 Face Acquisition and Preprocessing
+When the source is a video, frames are extracted using a documented and fixed sampling
+policy. Face regions are then detected using a documented face detector such as MTCNN or
+RetinaFace. The specified preprocessing pipeline uses a 20% bounding-box margin to retain
+blending boundaries, five-landmark alignment when available, and bilinear resizing to224× 224
+pixels. If alignment fails, the fallback policy and failure rate must be reported; frames must not
+be silently dropped in a class-dependent manner.
+4
+--- PAGE ---
+PAGE 5:
+Input face image
+224× 224× 3
+Spatial branch: Xception
+728× 14× 14
+Luminance→ 3-level db4 WPD
+64 packets at28× 28
+HiFE projection:256 × 14× 14
+Bidirectional spatial–
+frequency cross-attention
+728 + 128 + 128 = 984channels
+Global average pooling and MLP
+Image-level real/fake logit
+Figure 1:Single-image processing pipeline. The three-level WPD branch produces 64 packet maps; HiFE
+projects its output to the14× 14fusion grid. DCA exchanges information between spatial and frequency
+tokens, and the classifier outputs one image-level logit.
+Let Xrgb∈ [0, 1]224×224×3 be the resized RGB crop. Branch-specific normalization is applied
+after the luminance signal is calculated, avoiding ambiguity between normalized RGB values
+and the luminance coefficients. The same decoding, resizing, and crop policy must be applied to
+authentic and manipulated samples.
+4.3 Spatial Representation
+The spatial branch uses an ImageNet-1k-pretrained Xception implementation accessed through
+timm, with a feature tap reported at Middle Flow Stage 3. For an input batch Xrgb ∈
+RB×3×224×224, the reported implementation output is
+Fs =G s(Xrgb;θs)∈R B×728×14×14.(2)
+The implementation report identifies this as the actual tap point, rather than a dimension
+obtained by arbitrary reshaping. Reproduction should record the precisetimm version and weight
+identifier used for the run.
+4.4 Luminance Wavelet-Packet Branch
+For RGB values represented in the[0,1]range, luminance is calculated as
+Y= 0.299R+ 0.587G+ 0.114B.(3)
+The differentiable two-dimensional wavelet-packet transform uses fixed db4 quadrature-mirror
+filter banks of lengthK = 8. The separable filters are formed from low- and high-pass filters as
+LL =hL⊗hL, LH =hL⊗hH, HL =hH⊗hL, andHH =hH⊗hH. At each of three levels
+5
+--- PAGE ---
+PAGE 6:
+every packet is decomposed, resulting in43 = 64terminal bands. The implementation report
+specifies reflect padding(3, 4, 3, 4)before stride-2 convolution at each level, giving the dyadic
+size transitions224→112→56→28. Thus,
+W3 = WPDdb4,L=3(Y)∈R B×64×28×28.(4)
+The reported test suite checks filter-bank properties and gradient propagation. The implementa-
+tion supports both log-magnitude,log(|W3| +ϵ), and log-energy,log(W 23 +ϵ), representations.
+The exact representation mode used to produce the AUC values must be recorded from the
+corresponding experiment configuration before publication; these definitions should not be treated
+as interchangeable.
+4.5 High-Frequency Enhancement
+The enhancement module is designed to learn channel-wise weighting and local transformations
+of WPD packet features. LetW denote the stacked packet tensor and letzavg andzmax be global
+average- and max-pooled channel descriptors. A channel gate can be expressed as
+g=σ(MLP a(zavg) + MLPm(zmax)),(5)
+followed by a residual feature transformation
+We =W⊙g+ Φ(W),(6)
+whereΦis a learned convolutional transformation and⊙ denotes element-wise multiplication
+with appropriate broadcasting. The exact convolution type, kernel sizes, normalization, and
+activation functions must match the source implementation and be specified in the final version.
+Because compressed media may have lost information, this module should be described as feature
+enhancement or reweighting unless a separate reconstruction objective demonstrably supports
+stronger reconstruction claims.
+The enhanced frequency tensor is projected to the fusion resolution. The intended projected
+representation is
+Ff∈R 256×14×14.(7)
+The projection operation and its output dimensions require a model-shape test.
+4.6 Dual Cross-Attention Fusion
+The spatial and frequency features are aligned on a14× 14grid. Flattening this grid gives
+N = 196tokens per branch. The reported DCA implementation projects each direction to a
+128-dimensional attended representation. LetF′s∈R B×196×728 and F′f∈R B×196×256 denote the
+spatial and frequency token sequences. Query, key, and value projections are learned so that
+each value sequence has 128 channels:
+Qs =F ′sWQs, K f =F ′fWKf, V f =F ′fWVf,(8)
+Qf =F ′fWQf, K s =F ′sWKs, V s =F ′sWVs.(9)
+6
+--- PAGE ---
+PAGE 7:
+Following the general scaled dot-product attention formulation [14], the bidirectional cross-
+attention outputs are
+As→f = Softmax
+(︄
+QsK⊤f√dk )︄Vf,(10)
+Af→s = Softmax
+(︄
+QfK⊤s√dk )︄Vs,(11)
+where the query/key projection dimension isdk and each attended output has shapeB× 196×128.
+Reshaping the outputs back to feature maps and concatenating them with the spatial bypass
+yields
+Ffused = [Fs∥As→f∥Af→s]∈R B×984×14×14,(12)
+since728 + 128 + 128 = 984. This is the channel accounting reported for the implementation. It
+should not be confused with concatenating the 256-channel projected frequency tensor directly to
+the spatial stream. Any exact replication should additionally record the implemented attention
+head count, normalization, and projection details from the model configuration.
+4.7 Classification and Optimization
+Global average pooling maps the fused feature tensor to a vectorz∈R 984. The proposed
+classification head applies a fully connected layer with 512 units, batch normalization, ReLU,
+dropout withp = 0.5, and a final linear projection to a scalar logitℓ. The manipulated-class
+probability isˆp=σ(ℓ).
+For binary labelsyi∈{0,1}and smoothed labels
+y∗i =y i(1−ϵ) + ϵ2, ϵ= 0.05,(13)
+the binary cross-entropy objective is
+L=− 1N N∑︂i=1 [y∗i log ˆpi + (1−y ∗i ) log(1−ˆpi)].(14)
+The implementation should use a numerically stable loss, such as a logits-based binary cross-
+entropy implementation, when the output supplied to the loss is a logit. The sigmoid should
+then be applied only for probability reporting and threshold-based decisions.
+5 Experimental Protocol
+5.1 Datasets and Evaluation Roles
+Theimage-levelexperimentsusethe“140kRealandFakeFaces”collection, identifiedintheproject
+dataset configuration as FFHQ real images versus StyleGAN2-generated images. StyleGAN2
+is described by Karraset al.[15]. The dataset is reported to contain 140,000 balanced images
+partitioned into 100,000 training images (50,000 real and 50,000 fake), 20,000 validation images
+(10,000 real and 10,000 fake), and 20,000 test images (10,000 real and 10,000 fake). All AUC
+values reported here refer to this static-image collection, not to FaceForensics++ video.
+7
+--- PAGE ---
+PAGE 8:
+FaceForensics++ is a planned video benchmark. The experiment workspace used for this report
+contained preparation scripts and directory scaffolding but not the video data; thus, no FF++
+C0/C23/C40 results are reported. Celeb-DF v2 and DFDC are intended external benchmarks
+[16,17], but completed metrics for these datasets are not available. Table 1 distinguishes completed
+image-level evaluation from planned video and external-domain testing.
+T able 1:Dataset roles and current evidence status.
+Dataset Role Current status
+140k Real/Fake
+Faces
+Completed image-level JPEG evaluation; de-
+scribed as FFHQ versus StyleGAN2
+Reported split: 100k train, 20k validation,
+20k test; each split is balanced.
+FF++ Planned video benchmark under native
+C0/C23/C40 conditions
+Videos not present in the reported workspace;
+no results claimed here.
+Celeb-DF v2
+and DFDC
+Intended external-domain benchmarks Do not report completed metrics unless the
+experiment output and split metadata are
+available.
+5.2 Partitioning and Leakage Prevention
+Split video/source identities before extracting frames. No source video or near-duplicate frame
+should appear in more than one partition. Perform exact-hash checks and perceptual-hash checks
+where appropriate. Audit whether real and fake classes differ in metadata, resolution, crop
+distribution, encoding, or background in ways that could become shortcuts. Generate train,
+validation, and test manifests once, version them, and record their hashes in every experiment
+log.
+5.3 Compression Protocol
+The completed image-level evaluation reported in the available experiment record uses JPEG
+quality factors Q∈{ 100, 50, 23} and a broader sweepQ∈{ 100, 90, 75, 50, 30, 20, 10}. The
+reported quantitative points currently available are for JPEGQ = 50and Q = 23; the quality-10
+result is described only as a decline without a numeric AUC. JPEG quality factors describe image
+recompression and must remain distinct from FaceForensics++ video compression labels C0,
+C23, and C40. The native FF++ video evaluation was not completed in the reported workspace
+and is not presented as an experimental result here.
+5.4 Matched Ablations
+The implementation report describes six configurable model variants inmodels/team14_net.py.
+Their existence establishes that the code supports the comparisons; it does not establish that all
+six variants have completed matched training and evaluation. The variants are listed in Table 2.
+A fair comparison must match the data split, preprocessing, optimization budget, model selection,
+and JPEG transformations as closely as possible.
+5.5 Training Configuration and Verification Environment
+The architecture verification environment was an NVIDIA GeForce RTX 4060 Laptop GPU with
+8 GB VRAM, CUDA 12.4, and PyTorch 2.6.0+cu124. The initial development specification listed
+8
+--- PAGE ---
+PAGE 9:
+T able 2:Six implemented architecture variants and the component each is intended to isolate.
+ID V ariant key Purpose
+Aspatial_onlyXception spatial baseline.
+Bwpd_onlyFrequency-branch baseline.
+C
+spatial_wpd_
+concatMeasures the effect of adding WPD with simple concatenation.
+D
+spatial_wpd_
+hifeEvaluates enhancement with the spatial-frequency model.
+E
+spatial_wpd_
+dcaEvaluates DCA without HiFE.
+Ffull_team14Full WPD + HiFE + DCA system.
+PyTorch 2.2 and CUDA 12.1; the environment above is the one associated with the reported
+implementation tests. The run-level configuration linked to each AUC value should include the
+optimizer, batch size, number of epochs or optimization steps, augmentation settings, random
+seed, and WPD representation mode. These fields were not all present in the available result
+record and therefore are not inferred here.
+The standardized protocol for future matched ablations specifies AdamW, a batch size of 32,
+20 epochs, two warm-up epochs, a cosine learning-rate schedule, a5.0× 10−5 learning rate for
+the spatial backbone and1.0× 10−4 for the wavelet/fusion/head parameters, and weight decay
+10−4. It prescribes horizontal flipping, mild color jitter, Gaussian blur, and JPEG augmentation
+with Q∈ [60, 100]on the training split only. These settings define the reproducible ablation
+protocol; the available run-level records do not establish that each setting exactly matches the
+training run that produced the two reported AUC points.
+The project protocol specifies five seeds,s∈{ 0, 1, 2, 3, 4}, for principal comparisons where
+resources permit. However, the available experiment record does not identify the number of seeds
+used for the two quoted AUC values. Those values are therefore reported as point estimates, not
+as five-seed means. Repeated-seed mean, standard deviation, confidence intervals, and paired
+statistical comparisons remain required for the completed ablation study.
+5.6 Metrics and Threshold Selection
+Report ROC-AUC, accuracy, balanced accuracy, precision, recall, F1-score, confusion matrices,
+false-positive and false-negative rates, and calibration measures where relevant. Equal Error Rate
+may be included if its calculation and interpolation procedure are explicitly specified. Define the
+number and strategy of ECE bins and provide reliability diagrams alongside the Brier score.
+Select the operating threshold on the validation set only and freeze it before test evaluation.
+Report performance at0.5separately where useful. Confidence intervals and hypothesis tests
+should account for the unit of dependence; correlated frames from the same video must not
+be treated as independent observations. Use a paired bootstrap or DeLong test for AUC
+comparisons when appropriate, and report effect sizes, confidence intervals, and corrections for
+multiple comparisons.
+5.7 Efficiency and Reproducibility
+Measure throughput, per-image or per-frame latency, and peak memory separately. For GPU
+timing, perform warm-up iterations and synchronize CUDA before and after the timed region.
+9
+--- PAGE ---
+PAGE 10:
+Compare methods under equivalent batch sizes and input shapes, and report repeated timings.
+Save model checkpoints, configs, package versions, dataset-manifest identifiers, seeds, and
+evaluation outputs. Figures and tables must be generated from stored results rather than
+hardcoded values.
+6 Results
+The reported result set contains two quantitative JPEG AUC values but does not include the
+run count, confidence intervals, or all machine-readable evaluation artifacts needed to establish
+whether these values are single-run measurements or aggregates. They are therefore reported as
+point estimates, not as multi-seed averages. No missing measurements are inferred.
+6.1 JPEG Compression Evaluation
+The available image-level findings are summarized in Table 3. On the FFHQ-versus-StyleGAN2
+static-image test split, the reported AUC is 0.937 at JPEGQ = 50and 0.888 at JPEGQ = 23.
+Performance is described as lower atQ = 10, but no numeric AUC is available for that condition.
+T able 3:Reported JPEG-quality results on the FFHQ-versus-StyleGAN2 image evaluation. Values are
+point estimates from the available experiment record; seed aggregation and confidence intervals were not
+supplied.
+JPEG quality QROC-AUC Evidence status
+50 0.937 Numeric value reported in the available experiment record.
+23 0.888 Numeric value reported in the available experiment record.
+10 Not supplied A decline is reported, but the numeric AUC is unavailable.
+100 Not supplied
+here
+Included among evaluated quality factors, but no numeric AUC was
+supplied.
+These results indicate that the reported detector retains discriminative ability at the two
+stated JPEG settings, with lower AUC atQ = 23than at Q = 50. They do not establish
+resilience to FF++ C40, since JPEG image quality and FF++ video compression levels are
+different protocols. Nor do these two points alone define a full robustness curve or demonstrate
+that WPD, HiFE, or DCA independently caused the observed performance.
+6.2 Implementation Verification
+The implementation verification outcomes are summarized in Table 4. The reported tests
+assess the model components and differentiable filter-bank implementation in the stated CUDA
+environment. Unit tests provide implementation-level evidence; they do not, by themselves,
+establish comparative detector accuracy or generalization.
+T able 4:Implementation verification results reported by the project.
+T est suite Passed Reported runtime
+test_team14_architecture.py13/13 3.344 s on CUDA.
+test_differentiable_wpd.py6/6 0.732 s on CUDA.
+10
+--- PAGE ---
+PAGE 11:
+The implemented WPD filter bank uses fixed registered buffers and supports input gradients.
+Under the specified reflect-padding and dyadic-downsampling convention, it produces 64 packet
+maps of28× 28from a224 × 224luminance image. The mathematical tests are reported to
+check unit filter energy, pairwise orthogonality, and finite non-zero gradients propagated to the
+input. The reported feature shapes are728× 14× 14for the spatial stream,256× 14× 14after
+HiFE, and984× 14× 14after fusion. Reproducibility additionally requires dependency versions
+and run-specific configuration records.
+6.3 Ablation and Cross-Generator Evidence
+The six canonical architecture variants are implemented in the repository, but the available
+experiment record does not contain their full per-variant metrics under a matched protocol.
+Consequently, no ranking among the spatial-only, WPD-only, concatenation, HiFE, DCA, and
+full-model variants is reported here. In particular, the available information does not establish
+that DCA outperforms simple concatenation or that every added component contributes an
+independent gain.
+A qualitative drop is reported when transferring from GAN-generated content to diffusion-
+generated content. However, the transfer dataset counts, generator list, numeric AUC, and
+uncertainty estimates are not specified, so the magnitude of this domain shift cannot be quantified
+from the current results. Cross-generator robustness therefore remains an open evaluation
+question.
+6.4 Planned External Evaluation
+No FaceForensics++ video files were available in the evaluated workspace, so no FF++
+C0/C23/C40 metrics are reported. Celeb-DF v2 and DFDC remain external evaluation targets
+pending audited runs. Because the network is a binary classifier without a segmentation decoder,
+no pixel-level localization scores are reported; Grad-CAM and attention maps are qualitative
+feature-inspection tools only.
+7 Discussion
+The reported JPEG AUCs provide an initial measurement of image-level performance on the
+FFHQ-versus-StyleGAN2 collection: AUC is 0.937 at Q = 50and 0.888 at Q = 23. The
+decline is consistent with increasing degradation, but the limited reported points and absence of
+uncertainty statistics limit the strength of any robustness claim. In particular, JPEG quality
+factors must not be relabelled as FF++ C23/C40, and image-level results should not be presented
+as video-benchmark results.
+The reported architecture and WPD tests passed on an RTX 4060 Laptop GPU using PyTorch
+2.6.0+cu124 and CUDA 12.4. These tests support the stated tensor shapes and differentiable
+implementation. They do not show that the full model is more accurate than the ablations, or
+that DCA prevents frequency-branch undertraining. Such conclusions require matched training
+runs, per-variant metrics, uncertainty estimates, and appropriate statistical tests.
+The study defines five hypotheses covering augmentation (H1), incremental WPD contribution
+(H2), HiFE contribution (H3), DCA versus concatenation (H4), and domain-shift performance
+11
+--- PAGE ---
+PAGE 12:
+(H5). The available measurements provide initial evidence for image-level JPEG evaluation and
+implementation correctness, but are insufficient to confirm H2–H5. The qualitative cross-generator
+observation should not be generalized to all synthesis families.
+Limitations include the single active image dataset for the reported JPEG values, missing
+numerical results for JPEG Q=10 and Q=100 in the available experiment record, absence of
+complete matched-ablation and multi-seed tables, lack of fully specified numeric external-transfer
+metrics, and unavailable FF++ video data in the workspace described by the report. The
+architecture is an image-level binary classifier and does not provide pixel-level manipulation
+masks. JPEG recompression also cannot represent every social-media or video-transcoding
+pathway.
+8 Conclusion
+This paper documents a dual-branch deepfake image classifier built from an ImageNet-pretrained
+Xception spatial stream, a differentiable three-level db4 wavelet-packet branch, a learnable
+high-frequency enhancement module, and bidirectional dual cross-attention fusion. According to
+the implementation record, the WPD and architecture test suites passed on an NVIDIA RTX
+4060 Laptop GPU under PyTorch 2.6.0+cu124 and CUDA 12.4. On the reported FFHQ-versus-
+StyleGAN2 image evaluation, ROC-AUC point estimates were 0.937 at JPEG quality 50 and
+0.888 at JPEG quality 23; a decline at quality 10 was reported without a supplied numeric
+value. These findings are specific to the stated image dataset and JPEG protocol. Complete
+matched-ablation metrics, repeated-seed uncertainty, and fully quantified external-generator
+results are still needed before claiming that the proposed architecture components independently
+improve compression robustness or generalization.
+Reproducibility and Data Statement
+The reported verification environment is an NVIDIA GeForce RTX 4060 Laptop GPU (8
+GB VRAM), PyTorch 2.6.0+cu124, and CUDA 12.4. The reported test outcomes are 13/13
+architecture tests and 6/6 differentiable-WPD tests passing. To make the study independently
+reproducible, a submission package should include a stable repository URL, commit hash,
+dependency lock, dataset-manifest identifiers, training configurations, checkpoint identifiers,
+and scripts used to generate Table 3. Dataset content should only be redistributed where
+licensing permits. The completed manuscript must also include the target journal’s required
+data-availability, funding, conflicts-of-interest, author-contribution, and AI-use declarations.
+References
+[1] A. Rössler, D. Cozzolino, L. Verdoliva, C. Riess, J. Thies, and M. Nießner, “FaceForensics++:
+Learning to detect manipulated facial images,” inProc. IEEE/CVF Int. Conf. Comput. Vis.
+(ICCV), 2019, pp. 1–11.
+[2] F. Chollet, “Xception: Deep learning with depthwise separable convolutions,” in
+Proc. IEEE Conf. Comput. Vis. Pattern Recognit. (CVPR), 2017, pp. 1251–1258, doi:
+10.1109/CVPR.2017.195.
+12
+--- PAGE ---
+PAGE 13:
+[3] J. Frank, T. Eisenhofer, L. Schönherr, A. Fischer, D. Kolossa, and T. Holz, “Leveraging
+frequency analysis for deep fake image recognition,” inProc. 37th Int. Conf. Mach. Learn.,
+vol. 119, 2020, pp. 3247–3258.
+[4] Y. Qian, G. Yin, L. Sheng, Z. Chen, and J. Shao, “Thinking in frequency: Face forgery
+detection by mining frequency-aware clues,” inProc. Eur. Conf. Comput. Vis. (ECCV),
+2020, pp. 86–103.
+[5] H. Kashiani, N. A. Talemi, and F. Afghah, “FreqDebias: Towards generalizable deepfake
+detection via consistency-driven frequency debiasing,” inProc. IEEE/CVF Conf. Comput.
+Vis. Pattern Recognit. (CVPR), 2025, pp. 8775–8785, doi: 10.1109/CVPR52734.2025.00820.
+[6] M. Wolter, F. Blanke, R. Heese, and J. Garcke, “Wavelet-packets for deepfake image analysis
+and detection,”Mach. Learn., vol. 111, pp. 4295–4327, 2022, doi: 10.1007/s10994-022-06225-
+5.
+[7] S. Mallat, “A theory for multiresolution signal decomposition: The wavelet representation,”
+IEEE Trans. Pattern Anal. Mach. Intell., vol. 11, no. 7, pp. 674–693, 1989.
+[8] R. R. Coifman and M. V. Wickerhauser, “Entropy-based algorithms for best basis selection,”
+IEEE Trans. Inf. Theory, vol. 38, no. 2, pp. 713–718, 1992.
+[9] Y. Wang, K. Yu, C. Chen, X. Hu, and S. Peng, “Dynamic graph learning with content-
+guided spatial-frequency relation reasoning for deepfake detection,” inProc. IEEE/CVF
+Conf. Comput. Vis. Pattern Recognit. (CVPR), 2023, pp. 7278–7287.
+[10] F. Wang, Q. Chen, B. Jing, Y. Tang, Z. Song, and B. Wang, “Deepfake detection based on
+the adaptive fusion of spatial-frequency features,”Int. J. Intell. Syst., vol. 2024, Art. no.
+7578036, 2024, doi: 10.1155/2024/7578036.
+[11] J. Gao, Z. Xia, G. L. Marcialis, C. Dang, J. Dai, and X. Feng, “Deepfake detection based
+on high-frequency enhancement network for highly compressed content,”Expert Syst. Appl.,
+vol. 249, Art. no. 123732, 2024, doi: 10.1016/j.eswa.2024.123732.
+[12] T. Ghosh and R. Naskar, “WGN: Wavelet-guided network for efficient and generalised
+deepfake detection,” inProc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. Workshops
+(CVPRW), 2026, pp. 10984–10993.
+[13] N. A. Chandraet al., “Deepfake-Eval-2024: A multi-modal in-the-wild benchmark of
+deepfakes circulated in 2024,” inProc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit.
+Workshops (CVPRW), 2026, pp. 10668–10678.
+[14] A. Vaswaniet al., “Attention is all you need,” inAdvances in Neural Information Processing
+Systems, vol. 30, 2017.
+[15] T. Karras, S. Laine, M. Aittala, J. Hellsten, J. Lehtinen, and T. Aila, “Analyzing and
+improving the image quality of StyleGAN,” inProc. IEEE/CVF Conf. Comput. Vis. Pattern
+Recognit. (CVPR), 2020, pp. 8110–8119.
+[16] Y. Li, X. Yang, P. Sun, H. Qi, and S. Lyu, “Celeb-DF: A large-scale challenging dataset for
+deepfake forensics,” inProc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR),
+2020, pp. 3207–3216, doi: 10.1109/CVPR42600.2020.00327.
+13
+--- PAGE ---
+PAGE 14:
+[17] B. Dolhansky, J. Bitton, B. Pflaum, J. Lu, R. Howes, M. Wang, and C. C. Ferrer, “The
+DeepFake Detection Challenge (DFDC) dataset,” arXiv:2006.07397, 2020.
+14

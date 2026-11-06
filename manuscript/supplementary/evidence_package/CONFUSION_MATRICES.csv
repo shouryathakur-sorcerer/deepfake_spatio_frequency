@@ -1,0 +1,22 @@
+model_id,jpeg_condition,true_positives,true_negatives,false_positives,false_negatives,positive_class_definition,threshold
+Ref_ParallelSE_100k,q100,9994,9910,90,6,Synthetic/Deepfake (label=1),0.5
+Ref_ParallelSE_100k,q50,9986,9757,243,14,Synthetic/Deepfake (label=1),0.5
+Ref_ParallelSE_100k,q23,9953,9634,366,47,Synthetic/Deepfake (label=1),0.5
+B1_spatial_only,q100,9585,9001,999,415,Synthetic/Deepfake (label=1),0.5
+B1_spatial_only,q50,9380,8543,1457,620,Synthetic/Deepfake (label=1),0.5
+B1_spatial_only,q23,9012,8399,1601,988,Synthetic/Deepfake (label=1),0.5
+B2_frequency_only,q100,9173,3207,6793,827,Synthetic/Deepfake (label=1),0.5
+B2_frequency_only,q50,9177,2024,7976,823,Synthetic/Deepfake (label=1),0.5
+B2_frequency_only,q23,9231,1258,8742,769,Synthetic/Deepfake (label=1),0.5
+B3_naive_concat,q100,9659,8766,1234,341,Synthetic/Deepfake (label=1),0.5
+B3_naive_concat,q50,9365,8606,1394,635,Synthetic/Deepfake (label=1),0.5
+B3_naive_concat,q23,8602,8643,1357,1398,Synthetic/Deepfake (label=1),0.5
+B4_fft_baseline,q100,7971,1404,8596,2029,Synthetic/Deepfake (label=1),0.5
+B4_fft_baseline,q50,3426,5405,4595,6574,Synthetic/Deepfake (label=1),0.5
+B4_fft_baseline,q23,769,8688,1312,9231,Synthetic/Deepfake (label=1),0.5
+parallel_se,q100,9468,9284,716,532,Synthetic/Deepfake (label=1),0.5
+parallel_se,q50,9692,8070,1930,308,Synthetic/Deepfake (label=1),0.5
+parallel_se,q23,9501,7437,2563,499,Synthetic/Deepfake (label=1),0.5
+cross_gated,q100,8973,9653,347,1027,Synthetic/Deepfake (label=1),0.5
+cross_gated,q50,8419,9513,487,1581,Synthetic/Deepfake (label=1),0.5
+cross_gated,q23,6945,9573,427,3055,Synthetic/Deepfake (label=1),0.5

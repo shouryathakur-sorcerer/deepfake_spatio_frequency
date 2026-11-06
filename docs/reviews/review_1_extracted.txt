@@ -1,0 +1,1258 @@
+
+Journal-Paper Restructuring and Publication-Readiness Review
+Executive assessment
+Editorial decision
+
+Decision on the manuscript in its present form: major revision / reject-and-resubmit before journal submission. I would not recommend acceptance in its current state.
+
+The project has a potentially publishable core: a dual-branch detector combining an Xception spatial stream with a differentiable two-level Daubechies-4 wavelet-packet stream, followed by adaptive feature fusion. The full-scale model reports excellent in-domain performance on FFHQ versus StyleGAN2, including 99.52% accuracy and ROC-AUC 0.99995 at JPEG Q=100 and 97.94% accuracy with ROC-AUC 0.99904 at Q=23. The manuscript also reports useful calibration measures, confusion matrices, ablations, and a GPU implementation speed improvement.
+
+However, the main scientific problem is not poor performance; it is insufficient evidence that the proposed architecture itself causes the reported compression robustness. The headline model was trained with 100,000 images for eight epochs and on-the-fly JPEG augmentation, whereas the architectural baselines were trained with only 5,000 images for two epochs and without JPEG augmentation. Therefore, the experiments currently confound architecture, dataset size, optimization budget, precision mode, and augmentation. 
+
+A second major issue is novelty. Wavelet-packet deepfake analysis was already explicitly developed by Wolter et al. in 2022; that work found that WPD preserves spatial information while providing frequency localization and that fused wavelet/CNN architectures can outperform or compete with DCT and raw-image approaches. Spatial-frequency fusion, adaptive frequency extraction, multiscale attention, and adaptive wavelet/spatial fusion have also appeared subsequently. [1] The manuscript therefore cannot safely claim that WPD-based deepfake detection, spatial-frequency fusion, or adaptive fusion itself is the research novelty.
+
+At the same time, the broader research problem remains important. Recent reviews continue to identify compression, data-distribution shifts, and generalization as major weaknesses in deepfake detection, while recent primary work increasingly evaluates unseen generators, cross-dataset performance, and real-world or online-social-network degradation. [2] A 2026 in-the-wild benchmark reported a 45% AUC decrease for open-source image detectors relative to earlier academic benchmarks, emphasizing how misleading near-perfect in-domain results can be. [3]
+
+My assessment of the manuscript is therefore:
+
+Editorial dimension
+
+Current readiness
+
+Main reason
+
+Importance of problem
+
+4.5/5
+
+Compression-robust and generalizable deepfake detection remains important.
+
+Technical plausibility
+
+4/5
+
+WPD plus spatial features is technically well motivated.
+
+Novelty as presently claimed
+
+2/5
+
+Prior WPD and adaptive spatial-frequency fusion literature substantially overlaps.
+
+Experimental attribution
+
+1.5/5
+
+Full model and ablations are trained under fundamentally different conditions.
+
+In-domain empirical performance
+
+5/5
+
+Headline FFHQ–StyleGAN2 numbers are extremely strong.
+
+Generalization evidence
+
+1/5
+
+No unseen-generator or independent-dataset experiment.
+
+Statistical rigor
+
+2/5
+
+No repeated-seed uncertainty; threshold-selection and p-value methodology need repair.
+
+Reproducibility
+
+2.5/5
+
+Good implementation detail exists, but important transformation/data details and an accessible repository are missing.
+
+Literature/reference integrity
+
+1.5/5
+
+Multiple in-text citation numbers do not correspond to the reference list.
+
+Presentation
+
+3/5
+
+Readable, but compression labels and several claims are inconsistent or overstated.
+
+Overall journal readiness
+
+≈2.5/5
+
+Promising project, but not yet defensible as a journal contribution.
+
+The good news is that the paper does not need a completely different method. It needs a more defensible research question, fair experiments, stronger generalization tests, repaired literature positioning, and a journal-oriented manuscript structure.
+
+A stronger paper would revolve around this central question:
+
+Can a differentiable wavelet-packet representation provide complementary evidence to spatial features that improves synthetic-image detection under compression and distribution shift, beyond improvements attributable to JPEG augmentation alone?
+
+That is scientifically stronger than the present implicit claim that WPD plus adaptive fusion is intrinsically compression-resilient.
+
+A more defensible title would be:
+
+Compression-Robust Deepfake Image Detection with Differentiable Wavelet-Packet Features and Adaptive Spatio-Frequency Fusion
+
+I would avoid “Wavelet-Packet Attention” in the title unless attention is actually performed over the wavelet packets themselves. In the current architecture, the attention/gating primarily operates at the fusion stage, while WPD is the frequency decomposition.
+Literature validation of the research gaps
+
+The literature was assessed with emphasis on recent reviews and primary papers through October 2026. The 2025 review literature confirms that deepfake detection has shifted from asking whether frequency features work at all toward harder questions involving generalization, generator diversity, compression, robustness, and realistic deployment conditions. [4]
+Detailed gap-validation table
+
+Manuscript gap or implied claim
+
+Literature validation
+
+Support level
+
+Novelty status for this paper
+
+Editorial conclusion
+
+Lossy compression degrades deepfake detectors and motivates compression-robust detection.
+
+This remains well supported. Recent work specifically addresses compression variation in online social networks, and review literature lists compression as a major robustness obstacle. ODDN evaluates compression variation over 17 datasets. [5]
+
+High
+
+Valid problem, not novel
+
+Keep this as a principal motivation, but do not present it as an unexplored problem.
+
+Frequency-domain information provides complementary forensic cues to spatial appearance.
+
+Established by early frequency work and repeatedly reinforced. Frank et al. analyzed GAN frequency artifacts; later spatial-frequency architectures explicitly fuse the two domains. [6]
+
+High
+
+Established
+
+Reframe from “we introduce spatial-frequency fusion” to “we test a specific localized WPD representation under compression.”
+
+Wavelet packets offer multiscale spatial-frequency localization useful for deepfake analysis.
+
+Directly established by Wolter et al. in 2022, who introduced wavelet-packet deepfake analysis/detection and reported strong fused architectures. [7]
+
+High
+
+Not novel by itself
+
+The manuscript's present novelty language must be narrowed substantially.
+
+Standard DWT decomposes only the approximation branch whereas WPD recursively decomposes detail nodes as well.
+
+This is a legitimate transform-level distinction and supports the choice of WPD. Prior WPD deepfake work already exploited this richer multiscale representation. [7]
+
+High technically
+
+Known transform property
+
+Keep as method motivation, not a novelty claim. Demonstrate that WPD actually beats DWT under the same training protocol.
+
+Global Fourier/DCT methods are “completely blind” to local manipulations.
+
+Not supported as written. Modern frequency-aware methods incorporate content-adaptive/local frequency modeling and spatial-frequency reasoning, while localized-artifact methods explicitly target small manipulation regions. [8]
+
+Low / overstated
+
+—
+
+Replace “completely blind” with a qualified statement such as “global transforms may provide weaker explicit localization than localized multiresolution representations.”
+
+Adaptive spatial-frequency fusion is an unmet methodological gap.
+
+No. Adaptive cross-domain fusion already exists. Wang et al. 2024 uses Daubechies-wavelet and residual-frequency information with adaptive fusion; Wang et al. 2023 uses dynamic spatial-frequency fusion. [9]
+
+High evidence against novelty
+
+Established
+
+Your SE versus cross-gating comparison can still be useful, but it is an architectural study rather than the main novelty.
+
+Frequency features can improve robustness to heavy compression.
+
+Supported, but the field now expects systematic stress testing rather than a few quality points. A recent IEEE study, for example, compared DCT and FFT across 12 JPEG quality levels and multiple generators. [10]
+
+High
+
+Incremental opportunity
+
+Expand Q=100/50/23 into a robustness curve and evaluate compound transformations.
+
+A differentiable GPU-native WPD implementation could remove a practical training bottleneck.
+
+The checked WPD literature establishes the forensic representation, but the manuscript's GPU-native differentiable filter-bank implementation is a potentially useful engineering contribution if demonstrated fairly. [7]
+
+Moderate / potentially defensible
+
+Potentially novel implementation contribution
+
+Keep, but benchmark it rigorously and release code/tests. Do not oversell an engineering optimization as a new forensic principle.
+
+Generator-independent detection remains unresolved.
+
+Strongly validated and more important in current literature than the manuscript presently acknowledges. LSDA identifies distribution mismatch and forgery-specific overfitting; FreqDebias identifies frequency-domain spectral bias; D³ explicitly scales detection across generators. [11]
+
+Very high
+
+Major missing gap
+
+Add this as a core research gap and perform zero-shot generator transfer.
+
+Frequency cues themselves may become generator-specific shortcuts.
+
+Recent FreqDebias work specifically shows that over-reliance on particular spectral bands can restrict unseen-forgery generalization. [12]
+
+High
+
+Important omitted risk
+
+Your WPD branch should be evaluated for cross-generator spectral overfitting, not assumed to generalize.
+
+Real-world social-media robustness requires more than synthetic JPEG compression.
+
+Strongly supported. ODDN explicitly models OSN compression variability, while Deepfake-Eval-2024 demonstrates a large academic-to-in-the-wild performance gap. [13]
+
+Very high
+
+Major missing gap
+
+Q=23 alone cannot substantiate broad “social-media laundering” claims. Add compound/platform-like transforms or narrow the claim.
+
+Wavelet-guided compression robustness remains an active research direction.
+
+Yes, but competition has advanced. The 2026 WGN work uses a differentiable wavelet-guided network and reports compressed and out-of-distribution evaluation. [14]
+
+High
+
+Raises novelty bar
+
+Your 2026 submission must compare conceptually and experimentally against newer wavelet-guided methods, not only older FFT/DCT systems.
+The gaps that genuinely survive the literature review
+
+The manuscript should not center its novelty on “frequency-domain deepfake detection,” “wavelets,” “WPD,” or “spatial-frequency fusion.” Those areas already have substantial prior art. [15]
+
+The defensible research gaps are narrower:
+
+First, it remains valuable to establish whether full wavelet-packet decomposition contributes robustness independently of compression augmentation, rather than simply showing high performance when both are used.
+
+Second, the relative behavior of WPD, DWT, DCT and FFT under controlled, severe, and varying JPEG degradation can be studied more rigorously. Recent work's use of dense compression sweeps means three isolated quality factors are no longer a sufficiently comprehensive characterization. [10]
+
+Third, whether WPD-derived cues survive generator shift from StyleGAN2 to diffusion and other synthesis families is an important unanswered question for this particular architecture. Modern deepfake research increasingly treats unseen-generator performance as a central requirement. [16]
+
+Fourth, the interaction among frequency representation, JPEG augmentation, fusion design, and calibration is potentially publishable because the manuscript already exposes an interesting negative result: in the 5k/no-augmentation experiment, spatial-only accuracy at Q=23 is 87.06%, higher than ParallelSE's 84.69% and CrossGated's 82.59%.This suggests that a frequency branch does not automatically confer compression robustness; it may require compression-aware training. That is a scientifically interesting finding and should be elevated rather than hidden.
+
+Fifth, the GPU-native differentiable WPD implementation may form a legitimate reproducibility/efficiency contribution if its numerical equivalence, latency, memory use, and training throughput are rigorously demonstrated.
+
+The literature therefore supports a revised novelty statement along these lines:
+
+We do not introduce wavelet packets or spatial-frequency fusion for deepfake detection. Instead, we investigate whether a GPU-native differentiable full wavelet-packet representation provides measurable complementary robustness to a strong spatial detector under controlled JPEG degradation, quantify its dependence on compression-aware training, and analyze how adaptive fusion affects calibration and operating-point behavior.
+
+That claim is narrower, but much more credible.
+Gap-to-result validation and missing experiments
+
+The manuscript currently contains useful results, but several claims are not matched by an appropriate experiment. The distinction between “evidence exists” and “the gap has been causally validated” is crucial.
+Gap-to-result mapping
+
+Validated gap / hypothesis
+
+Evidence already in manuscript
+
+Adequacy
+
+What is missing
+
+The final system remains accurate after severe JPEG compression.
+
+Full model: accuracy 99.52% → 97.94% and AUC 0.99995 → 0.99904 from Q=100 to Q=23. 
+
+Strong descriptive evidence
+
+Confidence intervals/repeated runs; broader Q sweep; independent datasets.
+
+WPD causes the compression resilience.
+
+No full-scale spatial-only model under the same 100k/8-epoch/JPEG-augmentation protocol.
+
+Not validated
+
+Train spatial-only, WPD-only, DWT, DCT/FFT, concat, ParallelSE and CrossGated with identical data, epochs, optimizer and augmentation.
+
+The improvement is architectural rather than primarily due to random JPEG augmentation.
+
+Full model has JPEG augmentation; controlled baselines do not.
+
+Not validated
+
+Factorial experiment: spatial × proposed architecture, each with/without JPEG augmentation.
+
+WPD is better than FFT for deepfake detection.
+
+Controlled WPD-only q100 AUC 0.7479 versus FFT-only 0.4554; at Q=23, 0.5972 versus 0.4033. 
+
+Partial
+
+Match parameter capacity if possible; ≥3 seeds; DCT and DWT baselines; stronger FFT representation; same preprocessing.
+
+Full WPD is better than conventional DWT.
+
+No DWT baseline.
+
+Absent
+
+Add Haar/db4 DWT under identical network stem and training budget.
+
+db4 is a justified wavelet choice.
+
+db4 is selected, but comparative evidence is not provided. 
+
+Absent
+
+Haar, db2, db4 and optionally symlet; one versus two versus three decomposition levels.
+
+Adaptive fusion improves on simple feature concatenation.
+
+In the 5k controls, ParallelSE q23 AUC 0.9495 versus naive concat 0.9378; however naive concat q23 accuracy 86.23% exceeds ParallelSE's 84.69%.
+
+Partial and metric-dependent
+
+Full matched training, repeated seeds, paired CIs/tests, equal-capacity baselines.
+
+CrossGated and ParallelSE offer distinct operating-point behavior.
+
+Yes: CrossGated gives high precision/lower FPR but poor recall; ParallelSE gives high recall but high FPR at τ=0.5. 
+
+Useful evidence
+
+Validation-selected thresholds, cost-sensitive operating points, confidence intervals and calibration curves.
+
+WPD preserves/localizes evidence for partial manipulations.
+
+The dataset consists of whole-face StyleGAN2 synthetic images rather than localized manipulation tests.
+
+Not validated
+
+Add partial/localized manipulation dataset and, ideally, localization/attention visualization; otherwise remove this claim.
+
+The model generalizes beyond StyleGAN2.
+
+No unseen-generator experiment. The paper itself acknowledges this limitation. 
+
+Absent
+
+Train on StyleGAN2 only and test zero-shot on several GAN and diffusion generators.
+
+The model generalizes beyond FFHQ source statistics.
+
+Real class is FFHQ only. 
+
+Absent
+
+Cross-dataset real-image testing; diverse camera/web imagery; independent benchmark.
+
+The detector is robust to realistic social-media laundering.
+
+Only JPEG Q=100/50/23 is reported. 
+
+Partial at best
+
+Resize+JPEG, repeated JPEG, blur+JPEG, crop/rescale, WebP where relevant, and ideally actual platform-transcoded media.
+
+The classifier is well calibrated.
+
+ECE and Brier score are reported. 
+
+Promising but incomplete
+
+Define ECE binning; reliability diagrams; confidence intervals; temperature scaling fitted on validation only.
+
+Threshold optimization improves deployment performance.
+
+Youden-J optimized thresholds are reported.
+
+Potentially invalid if optimized on test set
+
+Select threshold on validation set only; freeze it before final test evaluation.
+
+The AUC difference between fusion mechanisms is statistically significant.
+
+The manuscript states p < 10⁻¹². 
+
+Insufficiently documented
+
+Specify paired DeLong/bootstrap test, sample unit, assumptions, correction for multiple comparisons, and effect size/CI.
+
+GPU WPD substantially accelerates the pipeline.
+
+111.8 → 163.2 images/s is reported, together with CPU and GPU transform timings. 
+
+Partial
+
+Apples-to-apples synchronized benchmark, repeated timings, warm-up, batch-size sweep, peak memory, inference latency.
+The most important experimental redesign
+
+The paper needs one experiment above all others:
+
+Training condition
+
+Spatial only
+
+Spatial + DWT
+
+Spatial + WPD
+
+WPD + naive concat
+
+WPD + ParallelSE
+
+WPD + CrossGated
+
+No JPEG augmentation
+
+✓
+
+✓
+
+✓
+
+✓
+
+✓
+
+✓
+
+JPEG augmentation
+
+✓
+
+✓
+
+✓
+
+✓
+
+✓
+
+✓
+
+All cells should use the same training images, same epochs/updates, optimizer, batch size, random-seed protocol, preprocessing and test set. The output should report mean ± standard deviation or 95% confidence interval over at least three independent seeds for the central comparisons.
+
+That experiment separates three questions that are currently entangled:
+
+Does JPEG augmentation improve robustness?
+
+Does WPD add anything beyond augmentation?
+
+Does adaptive fusion add anything beyond WPD and simple concatenation?
+
+Without this, a reviewer can reasonably conclude that the excellent Q=23 result is mainly an augmentation effect.
+
+A second essential experiment is zero-shot generator transfer. Current research explicitly treats unseen-generator performance as a primary criterion because detector performance often deteriorates under forgery-distribution mismatch. [17] A defensible protocol would train only on FFHQ–StyleGAN2 and test without retraining on at least four unseen generators, preferably mixing GAN and diffusion families. Modern frequency-based detection research already demonstrates evaluation on unseen diffusion models and cross-generator settings. [18]
+
+A third experiment should test realistic perturbation composition, because online environments do not simply apply a single JPEG operator. ODDN explicitly frames variable OSN compression as an open-world problem, and in-the-wild benchmarks show that academic test conditions substantially underestimate deployment difficulty. [13]
+
+The evidence logic should become:
+
+
+
+Important methodological corrections
+
+The manuscript calls
+Wi=ln(|Wi|+
+10
+-8)
+
+a “log-scaled absolute energy” representation. Mathematically, as written, this is a log-magnitude transform, not energy. Energy would normally involve squared magnitude or an aggregate such as ∑|W
+|
+2. The manuscript should either rename it log-magnitude WPD coefficients or redefine the representation mathematically. 
+
+There is also a dimensional ambiguity. The manuscript defines RGB input B×3×256×256, then states that a two-level WPD produces 16 sub-bands and that the frequency CNN receives 16 channels. A channel-wise WPD of RGB would ordinarily produce 16 packets per color channel, so the paper must specify whether RGB is converted to luminance, coefficients are combined across channels, filters use grouped convolutions, or another reduction is performed.  This is a reproducibility-critical issue.
+
+The implementation section should additionally document boundary/padding mode, coefficient orientation/order, stride, whether filters are frozen or trainable, numerical precision, normalization before the CNN stem, and numerical agreement with an established WPD implementation.
+Editor-style quality review and restructuring
+Manuscript structure
+
+The current document has the components of a technical report, but a journal paper requires a tighter question → method → controlled evidence → generalization → limitation chain. The present paper mixes implementation achievements, full-scale results, short-budget ablations and SOTA comparisons in a way that makes causal interpretation difficult. 
+
+I recommend this final structure:
+
+Title
+
+Compression-Robust Deepfake Image Detection with Differentiable Wavelet-Packet Features and Adaptive Spatio-Frequency Fusion
+
+Abstract
+
+Use five logical elements in approximately one paragraph: operational problem; precise gap; proposed method; fair experimental protocol; principal results. Do not lead with near-perfect FFHQ–StyleGAN2 numbers alone. The final abstract should include one in-domain robustness result and one unseen-generator/cross-dataset result once available.
+
+Introduction
+
+Start from the deployment problem, not from broad claims about generative AI. Then establish three evidence-backed gaps:
+
+deepfake detectors degrade under compression and distribution shift;spatial-frequency and wavelet methods already exist, but the incremental value of full WPD under controlled compression-aware training remains insufficiently isolated;robustness must be validated beyond a single generator and synthetic JPEG setting.
+
+Recent work makes generalization central, including LSDA, FreqDebias and D³. [11]
+
+End the introduction with testable hypotheses, not only contributions:
+
+H1: compression-aware training improves both spatial and spatio-frequency models.H2: WPD provides an incremental robustness gain after controlling for augmentation.H3: adaptive fusion improves threshold-independent discrimination and/or calibration beyond simple concatenation.H4: the WPD-enhanced model preserves part of this advantage under unseen-generator and cross-dataset shifts.
+
+Related Work
+
+Organize around: spatial detectors; global/local frequency methods; wavelet/WPD methods; spatial-frequency fusion; compression robustness; generalization. The literature review must explicitly acknowledge Wolter et al. 2022, dynamic spatial-frequency reasoning in 2023, adaptive wavelet/spatial fusion in 2024, FreqDebias and D³ in 2025, and recent wavelet-guided robustness work in 2026. [19]
+
+Method
+
+Use a single architecture figure containing the data flow from RGB image → spatial branch/WPD branch → packet representation → fusion → classifier. Add a second small schematic showing two-level WPD decomposition. The method should state tensor dimensions after every stage.
+
+Experimental Protocol
+
+Make this a major section, not a few paragraphs. Include datasets and provenance, train/validation/test counts, identity independence, duplicate checks, preprocessing, codec implementation, exact JPEG quality scheme, augmentation probability, seeds, optimizer, stopping/selection rule, threshold-selection policy and statistical tests.
+
+Results
+
+Use this sequence:
+
+controlled component ablation;
+
+JPEG robustness curve;
+
+generator/domain generalization;
+
+calibration and operating points;
+
+efficiency;
+
+qualitative/failure analysis.
+
+This ordering answers causal questions before displaying headline performance.
+
+Discussion
+
+Discuss why frequency information helps, where it fails, and especially the current negative finding that an unaugmented spatial-only model can outperform dual-branch models in raw Q=23 accuracy. fileciteturn0file0 Tie this to contemporary concerns about spectral shortcuts: frequency cues can themselves overfit to training-specific artifacts. [12]
+
+Limitations and Reproducibility
+
+Keep explicit limitations and add generator coverage, data provenance, platform simulation limits, demographic/source-domain limitations and computational cost.
+
+Conclusion
+
+Do not say the experiments “establish wavelet-packet attention as a robust paradigm.” A journal-appropriate conclusion would state exactly what was supported by the matched experiments.
+Editor-review checklist
+
+Area
+
+Current finding
+
+Required revision
+
+Severity
+
+Title
+
+“Wavelet-Packet Attention” may imply attention directly over WPD coefficients when attention occurs primarily in fusion.
+
+Rename more precisely unless packet-level attention is explicitly implemented.
+
+Major
+
+Abstract
+
+Strong quantitative summary, but mixes full-scale and 5k controlled experiments and presents WPD-versus-FFT evidence as stronger than it is.
+
+State training-regime differences; after revision report matched ablation and generalization.
+
+Critical
+
+Research-gap framing
+
+WPD and adaptive spatial-frequency fusion are presented too close to novel concepts.
+
+Explicitly acknowledge prior WPD and adaptive-fusion work. [20]
+
+Critical
+
+Absolute literature claims
+
+Statements such as DFT/DCT being “completely blind” to local manipulations are too strong.
+
+Qualify the claim and cite localized/adaptive frequency methods. [8]
+
+Critical
+
+Dataset accounting
+
+140k total is stated, 100k training and 20k test are described; the remaining 20k are not clearly accounted for in the manuscript text.
+
+Give an explicit train/validation/test table.
+
+Critical
+
+Leakage control
+
+Identity/source/duplicate separation is not sufficiently documented.
+
+Report identity overlap, perceptual-hash duplicate check and preprocessing parity.
+
+Critical
+
+Source shortcut control
+
+Real images and fake images arise from different pipelines/sources.
+
+Strip metadata; use identical encoding/resizing; test source-confound controls.
+
+Critical
+
+WPD dimensionality
+
+RGB input versus 16 WPD input channels is under-specified. 
+
+Explain channel handling mathematically and in code.
+
+Critical
+
+WPD terminology
+
+log(|W|+ε) is called energy. 
+
+Rename to log magnitude or change equation to actual energy.
+
+Major
+
+Boundary conditions
+
+WPD padding/border treatment is not adequately specified.
+
+State padding mode and expected coefficient dimensions.
+
+Major
+
+Full-scale ablation
+
+Missing.
+
+Repeat major baselines under identical 100k/full protocol.
+
+Critical
+
+Augmentation confound
+
+Proposed full model has JPEG augmentation; controlled baselines do not. 
+
+Factorial architecture × augmentation experiment.
+
+Critical
+
+Generalization
+
+Only FFHQ real versus StyleGAN2 fake. 
+
+Add unseen GAN and diffusion generators and independent real-source data.
+
+Critical
+
+Compression protocol
+
+Only Q=100, 50, 23.
+
+Add dense JPEG sweep, e.g. 100/95/90/80/70/60/50/40/30/23/15/10 where computationally feasible. Recent work already uses 12-level sweeps. [10]
+
+Major
+
+Social-media claim
+
+Single JPEG simulation is described as operational social-media laundering.
+
+Add compound/platform-like degradation or narrow the claim. [13]
+
+Critical
+
+Thresholding
+
+Youden's J thresholds appear to be reported from evaluation results without clear independent threshold-selection data. 
+
+Select τ on validation set only and lock before test evaluation.
+
+Critical
+
+Statistics
+
+p < 10⁻¹² is reported without sufficient test description. 
+
+State DeLong/bootstrap method, pairing, CI and multiple-comparison correction.
+
+Major
+
+Repeated seeds
+
+Not reported.
+
+Repeat key models ≥3 seeds; preferably 5 for low-cost ablations.
+
+Major
+
+Calibration
+
+ECE/Brier are a strength, but ECE construction is unspecified.
+
+Define bins; show reliability diagram; report uncertainty.
+
+Major
+
+Efficiency claim
+
+CPU timing per image and GPU timing per batch are not directly comparable. 
+
+Benchmark identical workloads with CUDA synchronization, warm-up and repetitions.
+
+Major
+
+Figures
+
+Figure captions use c0/c23/c40 while tables/text use JPEG Q=100/50/23. 
+
+Redraw every compression figure using one JPEG-Q nomenclature.
+
+Critical
+
+Compression terminology
+
+“c23/c40” resembles FaceForensics++ compression notation and risks conflation with JPEG quality.
+
+Never equate FF++ C23/C40 with JPEG Q=23/Q=40.
+
+Critical
+
+SOTA comparison
+
+Table 4 juxtaposes FaceForensics++ compressed-video results with StyleGAN2-vs-FFHQ JPEG-image results. 
+
+Remove ranking implication; separate literature context from same-protocol reproduced baselines.
+
+Critical
+
+References
+
+Numerous in-text numbers do not map correctly to the bibliography; e.g. Xception is discussed with numbering inconsistent with the final reference list. 
+
+Rebuild references from a citation manager and audit every citation manually.
+
+Critical
+
+Reproducibility
+
+File paths/checkpoint names are listed but no verifiable repository location is supplied. 
+
+Supply code, configs, manifests, seeds, environment and hashes. TIFS specifically encourages code/data needed to reproduce figures and tables. [21]
+
+Major
+
+Ethics/declarations
+
+Data licenses, misuse/dual-use statement, author contributions, funding/conflicts and AI-use disclosure are not comprehensively presented.
+
+Add journal-required declarations.
+
+Major
+
+Language
+
+Generally readable but uses promotional wording such as “catastrophic,” “outstanding,” “vastly,” and “robust paradigm.”
+
+Replace with quantitative, neutral statements.
+
+Moderate
+Citation integrity requires immediate attention
+
+This is a P0 issue, because editors may lose confidence in the entire literature review if citation numbering is unreliable.
+
+The manuscript's related-work discussion cites authors and methods using numerical labels that do not consistently correspond to the final reference list. For example, the text associates Xception with one citation number while the actual Chollet Xception paper appears at another location in the bibliography; similar shifts occur around Frank, Durall, Qian and related frequency-domain work. 
+
+Do not simply renumber automatically. Build a verification spreadsheet with:
+
+Claim → cited paper → exact support in source → correct bibliographic record → DOI → manuscript location.
+
+No SOTA accuracy/AUC figure should remain in the paper unless it has been verified against the original paper and its exact evaluation protocol.
+The current SOTA table should be removed or rebuilt
+
+The present Table 4 is potentially misleading because it places literature results from FaceForensics++ heavy video compression beside the manuscript's FFHQ-versus-StyleGAN2 JPEG image experiment.  These settings differ in dataset composition, generator/manipulation type, codec, test protocol and likely data split. Therefore, higher accuracy in your experiment does not establish superiority over those methods.
+
+Replace Table 4 with two tables:
+
+Literature-context table: method, dataset, training generator(s), test generator(s), compression mechanism, metric, and whether the number is copied from the original publication.
+
+Same-protocol comparison table: only models that you personally reproduce on the same FFHQ/StyleGAN2 split, preprocessing, training budget and JPEG tests.
+Figure redesign
+
+The figures on pages 6–9 visually summarize performance, ROC curves, confusion matrices and operating-point behavior, but the inconsistent c0/c23/c40 versus Q=100/Q=50/Q=23 nomenclature makes them unnecessarily confusing. 
+
+For the journal version, replace the redundant bar chart with a compression robustness curve:
+
+x-axis: JPEG quality;
+
+y-axis: ROC-AUC or balanced accuracy;
+
+separate curves for spatial-only, WPD fusion and at least one frequency baseline;
+
+mean over seeds;
+
+95% confidence band.
+
+That one plot would communicate much more than the current three-bar presentation.
+
+A second strong figure would visualize selected WPD packets for the same real/fake image at Q=100, Q=50 and Q=23, showing whether the discriminative patterns plausibly persist under compression. This would directly support the method's motivation rather than only showing output metrics.
+Journal alignment and submission strategy
+
+Three journals are plausible after substantial revision. I rank them by scientific fit, not by probability of acceptance in the manuscript's current state.
+Recommended journal alignment
+
+Journal
+
+Why it fits
+
+Current metrics
+
+Editorial bar for this paper
+
+Changes required
+
+APC/publication model
+
+IEEE Transactions on Information Forensics and Security (TIFS)
+
+Best thematic fit. Its official scope explicitly covers information forensics, security, biometrics and related systems. It also explicitly encourages reproducible research with code/data sufficient to reproduce figures and tables. [21]
+
+Official SPS page lists Impact Factor 8. [21]
+
+Strong forensic novelty, sound threat model, fair baselines, external generalization, statistical rigor and reproducibility.
+
+Add cross-generator/cross-dataset testing; matched full-scale ablation; realistic compression; repair SOTA comparison; provide code/manifests; tighten forensic framing.
+
+IEEE hybrid model. Traditional publication can avoid an OA APC; optional open-access charges follow IEEE's current pricing and should be confirmed at submission.
+
+Pattern Recognition
+
+Strong method-oriented fit because the journal accepts original contributions to pattern-recognition theory, methodology and applications, but explicitly discourages routine applications of established methods. [22]
+
+Current ScienceDirect pages list CiteScore 17.3 and Impact Factor 7.6. [23]
+
+Higher methodological novelty and broad pattern-recognition relevance than a dataset-specific detector paper.
+
+Reframe around the general representation question; add WPD/DWT/DCT/FFT comparison; multiple generators and domains; demonstrate why the fusion principle generalizes.
+
+Supports open access. Elsevier sets APCs by journal; subscription publication remains available, while optional OA pricing is shown through its APC tools/current journal page. [24]
+
+Expert Systems with Applications (ESWA)
+
+Strong applied-intelligent-systems fit. Elsevier describes ESWA as publishing original work on the design, testing and application of expert/intelligent systems, including neural networks and multimedia mining; it emphasizes genuine innovation rather than renamed existing concepts. [25]
+
+Current ScienceDirect pages list Impact Factor 7.5 and CiteScore 17.0. [26]
+
+Convincing practical problem, clear innovation, rigorous comparative experiments and deployment relevance.
+
+Emphasize practical compression-resilient detection; add strong external evaluation, efficiency results and operational trade-offs; clarify how the WPD system improves an applied detection pipeline.
+
+Supports open access; Elsevier offers subscription publication as well as optional OA APCs set per journal. Exact current price should be checked in the APC tool at submission. [24]
+
+Journal metrics and fees can change, so the values above are those displayed by the publishers during this review in October 2026. [27]
+Best target after revision
+
+TIFS is the best intellectual match if the authors can complete the generalization, statistical and reproducibility work. The paper is fundamentally an information-forensics paper, and TIFS explicitly values reproducible work in this area. [21]
+
+For a TIFS-oriented manuscript, the introduction should focus on a forensic threat model:
+
+images synthesized by unseen generators may be resaved, compressed, resized or redistributed before forensic examination; therefore a detector must not depend solely on pristine source-specific artifacts.
+
+The experiments should then directly represent that threat model.
+
+IEEE Signal Processing Society submission guidance allows regular-paper initial submissions up to 13 double-column pages, with longer revised-paper provisions and overlength charges under the current SPS rules, so the present 12-page format is already near the point where additional experiments must be presented efficiently or moved into supplementary material. [28]
+Pattern Recognition alignment
+
+Pattern Recognition becomes attractive if the authors strengthen the methodological contribution rather than describing the project primarily as a forensic application. Its own description states that routine applications of existing or well-known pattern-recognition methods should be directed elsewhere. [22]
+
+The paper would therefore need to answer a broader question such as:
+
+What representation/fusion properties make multiresolution localized frequency features robust to image degradation and synthesis-domain shift?
+
+A Pattern Recognition submission should include analysis of packet depth, wavelet family, frequency transform choice, fusion mechanism and cross-domain generalization. Merely reporting higher FFHQ–StyleGAN2 accuracy would be insufficient.
+ESWA alignment
+
+ESWA is probably the most realistic of the three after a strong major revision because the manuscript already has an applied intelligent-system narrative, computational implementation and operational metrics. ESWA's scope explicitly includes neural networks, multimedia mining, design/testing of intelligent systems and practical applications, while warning authors to demonstrate genuine innovation clearly. [25]
+
+For ESWA, emphasize:
+
+problem: post-processing damages forensic evidence;
+
+system: efficient spatial/WPD fusion detector;
+
+operational evidence: robust performance across compression, generator, and domain shift;
+
+deployment: precision/recall operating points, calibration, latency, throughput and memory;
+
+reproducibility: code, model and evaluation manifests.
+
+The existing precision-versus-recall comparison between CrossGated and ParallelSE is particularly useful for this applied framing, once thresholds are selected properly on validation data. 
+A journal I would not prioritize in the current form
+
+A seemingly natural choice would be Forensic Science International: Digital Investigation, but its official scope is unusually restrictive for generic image-forgery detectors: it states that general techniques for detecting forgery in digital photos/videos are outside scope unless they are tied convincingly to actual digital-investigation settings and suitable representative datasets. For this reason, I would not make it one of the first three targets unless the study gains genuine investigative-case evaluation. [29]
+Prioritized revision roadmap
+
+The revision should be treated as a scientific validation project first and a writing project second. Formatting a weak evidence chain for a journal will not solve the central issues.
+Author action plan
+
+Priority
+
+Timing
+
+Author task
+
+Concrete deliverable
+
+Pass criterion
+
+P0
+
+Days 1–3
+
+Audit all citations and SOTA numbers.
+
+Claim-to-source spreadsheet.
+
+Every citation maps to the correct reference and supports the statement.
+
+P0
+
+Days 1–3
+
+Repair JPEG terminology and all figure/table labels.
+
+Revised figures/tables using Q consistently.
+
+No C23/C40 versus JPEG-Q confusion remains.
+
+P0
+
+Days 2–4
+
+Rewrite novelty and research-gap claims.
+
+One-page novelty statement.
+
+No claim that WPD/spatial-frequency fusion itself is newly introduced.
+
+P0
+
+Week 1
+
+Audit dataset split, identity separation, duplicates and preprocessing.
+
+Dataset card + train/val/test manifests.
+
+All 140k samples accounted for; no leakage; metadata/source confounds assessed.
+
+P0
+
+Week 1
+
+Validate GPU WPD mathematically and numerically.
+
+Unit-test report.
+
+PyTorch coefficients agree with trusted implementation within stated tolerance.
+
+P0
+
+Week 1
+
+Fix WPD equation and RGB/channel specification.
+
+Revised method section.
+
+All tensor dimensions and transformations are reproducible.
+
+P0
+
+Weeks 2–4
+
+Run matched full-scale ablations.
+
+Main ablation table.
+
+Same data/epochs/augmentation/optimizer for all compared models.
+
+P0
+
+Weeks 2–4
+
+Isolate JPEG augmentation effect.
+
+Architecture × augmentation factorial result.
+
+Contribution of WPD can be distinguished from augmentation.
+
+P0
+
+Weeks 3–5
+
+Add unseen-generator evaluation.
+
+Cross-generator table.
+
+At least several GAN/diffusion generators tested zero-shot.
+
+P0
+
+Weeks 3–6
+
+Add independent/cross-dataset evaluation.
+
+External validation table.
+
+At least one dataset not derived from the original FFHQ–StyleGAN2 pipeline.
+
+P1
+
+Weeks 4–6
+
+Build dense compression and compound-degradation tests.
+
+Robustness curves.
+
+Performance characterized across severity rather than three isolated points.
+
+P1
+
+Weeks 4–6
+
+Test localized manipulation or remove localization claims.
+
+Experiment or revised text.
+
+Claim and evidence are aligned.
+
+P0
+
+Weeks 5–7
+
+Perform journal-grade statistical analysis.
+
+Statistics appendix/scripts.
+
+Repeated seeds, 95% CIs, paired tests and effect sizes.
+
+P0
+
+Weeks 5–7
+
+Correct threshold-selection methodology.
+
+Validation-threshold protocol.
+
+No threshold tuned using final test labels.
+
+P1
+
+Week 6
+
+Re-run efficiency benchmarks.
+
+Latency/throughput/memory table.
+
+Warm-up, synchronized timing, repeated measurements and comparable workloads.
+
+P0
+
+Week 7
+
+Rebuild literature/SOTA comparison.
+
+Two comparison tables.
+
+No cross-dataset numbers presented as direct SOTA rankings.
+
+P1
+
+Weeks 7–8
+
+Rewrite complete manuscript.
+
+Journal draft v2.
+
+Every contribution maps to an experiment.
+
+P1
+
+Week 8
+
+Redesign figures and tables.
+
+Publication-quality figure set.
+
+Readable without main text; error bars/confidence bands where relevant.
+
+P1
+
+Weeks 8–9
+
+Complete reproducibility package.
+
+Repository/supplement.
+
+Independent rerun can reproduce at least one headline result.
+
+P1
+
+Week 9
+
+Add ethics and submission declarations.
+
+Submission metadata package.
+
+Data/code availability, funding, conflicts, author contributions and relevant AI-use declarations complete.
+
+P1
+
+Week 9
+
+Tailor manuscript to selected journal.
+
+TIFS/PR/ESWA submission version.
+
+Scope, abstract, title, formatting and cover letter aligned.
+
+P0
+
+Week 10
+
+Conduct internal editor simulation.
+
+Final readiness checklist.
+
+No unresolved critical issue.
+Recommended work allocation
+
+The ML lead should own the WPD verification, matched ablations, generator-transfer study and efficiency benchmarking.
+
+The data/reproducibility owner should create immutable split manifests, audit identities/duplicates/source metadata, package environments and verify end-to-end reproducibility.
+
+The statistics owner should specify the analysis before the final experiment runs, especially seed aggregation, confidence intervals, ROC-AUC comparisons, calibration and threshold selection.
+
+The lead/corresponding author should own literature integrity, novelty framing, manuscript rewriting, journal alignment, ethics/declarations and the cover letter.
+
+A senior author who was not responsible for day-to-day implementation should conduct the final adversarial review. That person should attempt to reject the paper on novelty, leakage, experimental fairness and unsupported claims before an external editor has the opportunity to do so.
+Timeline
+
+
+
+Final acceptance gate
+
+I would consider the paper ready for journal submission only after the following five conditions are simultaneously met:
+
+Scientific novelty gate: The authors no longer claim novelty for wavelet packets or spatial-frequency fusion in general; the exact incremental contribution is distinguished from Wolter et al. and subsequent adaptive fusion/wavelet work. [30]
+
+Causal-evidence gate: The headline WPD/fusion gain survives a matched-budget experiment and can be separated from the effect of JPEG augmentation.
+
+Generalization gate: The detector is evaluated against unseen generators and at least one genuinely independent dataset. This is essential given current evidence that in-domain deepfake accuracy can fail badly under distribution shift and in the wild. [31]
+
+Integrity/statistics gate: No citation mismatch remains; no incompatible benchmark is presented as a direct comparison; thresholds are selected exclusively on validation data; major performance claims have uncertainty estimates.
+
+Reproducibility gate: The WPD implementation, training configs, manifests, seeds, environment, model checkpoints and evaluation scripts are accessible and reproduce the reported tables. This aligns particularly well with TIFS's explicit reproducible-research expectations. [21]
+
+The single most important conceptual change is to move from:
+
+“Our WPD-fusion model achieves 97.94% at Q=23, therefore WPD is compression resilient.”
+
+to:
+
+“Under matched conditions, we quantify how much robustness comes from compression-aware augmentation, how much additional robustness is contributed by WPD, whether adaptive fusion adds further benefit, and whether those gains persist across unseen generators and independent data.”
+
+That change turns the project from a strong engineering demonstration into a much more defensible journal study.
+
+The detailed author workbook contains the P0/P1 task list, deliverables, owners, dependencies, gap-to-evidence matrix, journal targets, editor checklist and timeline:
+
+
+[1] [7] [19] [20] [30] Wavelet-packets for deepfake image analysis and detection | Machine Learning | Springer Nature Link
+
+https://doi.org/10.1007/s10994-022-06225-5?utm_source=chatgpt.com
+
+[2] [4] A Review of Deepfake and Its Detection: From Generative Adversarial Networks to Diffusion Models - Liu - 2025 - International Journal of Intelligent Systems - Wiley Online Library
+
+https://onlinelibrary.wiley.com/doi/10.1155/int/9987535?utm_source=chatgpt.com
+
+[3] CVPR 2026 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2026W/APAI/html/Chandra_Deepfake-Eval-2024_A_Multi-Modal_In-the-Wild_Benchmark_of_Deepfakes_Circulated_in_2024_CVPRW_2026_paper.html?utm_source=chatgpt.com
+
+[5] [13] ODDN: Addressing Unpaired Data Challenges in Open-World Deepfake Detection on Online Social Networks | Proceedings of the AAAI Conference on Artificial Intelligence
+
+https://ojs.aaai.org/index.php/AAAI/article/view/32063?utm_source=chatgpt.com
+
+[6] [15] Leveraging Frequency Analysis for Deep Fake Image Recognition
+
+https://proceedings.mlr.press/v119/frank20a?utm_source=chatgpt.com
+
+[8] CVPR 2023 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2023/html/Wang_Dynamic_Graph_Learning_With_Content-Guided_Spatial-Frequency_Relation_Reasoning_for_Deepfake_CVPR_2023_paper.html?utm_source=chatgpt.com
+
+[9] Deepfake Detection Based on the Adaptive Fusion of Spatial‐Frequency Features - Wang - 2024 - International Journal of Intelligent Systems - Wiley Online Library
+
+https://onlinelibrary.wiley.com/doi/full/10.1155/2024/7578036?utm_source=chatgpt.com
+
+[10] DCT vs. FFT Frequency Features for Compression-Robust Deepfake Detection: A Systematic Comparison | IEEE Conference Publication | IEEE Xplore
+
+https://ieeexplore.ieee.org/abstract/document/11368196?utm_source=chatgpt.com
+
+[11] [16] [17] [31] CVPR 2024 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2024/html/Yan_Transcending_Forgery_Specificity_with_Latent_Space_Augmentation_for_Generalizable_Deepfake_CVPR_2024_paper.html?utm_source=chatgpt.com
+
+[12] CVPR 2025 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2025/html/Kashiani_FreqDebias_Towards_Generalizable_Deepfake_Detection_via_Consistency-Driven_Frequency_Debiasing_CVPR_2025_paper.html?utm_source=chatgpt.com
+
+[14] CVPR 2026 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2026W/PPMisDet/html/Ghosh_WGN_Wavelet-Guided_Network_for_Efficient_and_Generalised_Deepfake_Detection_CVPRW_2026_paper.html?utm_source=chatgpt.com
+
+[18] CVPR 2025 Open Access Repository
+
+https://openaccess.thecvf.com/content/CVPR2025/html/Chu_FIRE_Robust_Detection_of_Diffusion-Generated_Images_via_Frequency-Guided_Reconstruction_Error_CVPR_2025_paper.html?utm_source=chatgpt.com
+
+[21] [27] About Transactions on Information Forensics and Security | IEEE Signal Processing Society
+
+https://signalprocessingsociety.org/index.php/publications-resources/ieee-transactions-information-forensics-and-security/about-transactions?utm_source=chatgpt.com
+
+[22] Subscribe to Pattern Recognition - 0031-3203 | Elsevier Shop | Elsevier Shop
+
+https://shop.elsevier.com/journals/pattern-recognition/0031-3203?utm_source=chatgpt.com
+
+[23] Pattern Recognition | Vol 178, October 2026 | ScienceDirect.com by Elsevier
+
+https://www.sciencedirect.com/journal/pattern-recognition/vol/178/suppl/C?utm_source=chatgpt.com
+
+[24] Open access | Elsevier
+
+https://www.elsevier.com/en-in/open-access?utm_source=chatgpt.com
+
+[25] Subscribe to Expert Systems with Applications - 0957-4174 | Elsevier Shop | Elsevier Shop
+
+https://shop.elsevier.com/journals/expert-systems-with-applications/0957-4174?utm_source=chatgpt.com
+
+[26] Expert Systems with Applications | Vol 180, 15 October 2021 | ScienceDirect.com by Elsevier
+
+https://www.sciencedirect.com/journal/expert-systems-with-applications/vol/180/suppl/C?utm_source=chatgpt.com
+
+[28] Publications FAQ | IEEE Signal Processing Society
+
+https://signalprocessingsociety.org/publications-resources/publications-faq?utm_source=chatgpt.com
+
+[29] Subscribe to Forensic Science International: Digital Investigation - 2666-2817 | Elsevier Shop | Elsevier Shop
+
+https://shop.elsevier.com/journals/forensic-science-international-digital-investigation/2666-2817?utm_source=chatgpt.com

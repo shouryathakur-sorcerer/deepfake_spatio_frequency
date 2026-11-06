@@ -1,0 +1,44 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyTorch checkpoints and large model weights
+*.pth
+*.pt
+*.bin
+*.onnx
+
+# Datasets and archives
+data/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# LaTeX build intermediate artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Environments & Virtual Envs
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db

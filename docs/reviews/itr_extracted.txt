@@ -1,0 +1,472 @@
+
+Dual-Branch Spatio-Frequency Deepfake Detection via Multi-Scale Wavelet-Packet Decomposition and Adaptive High-Frequency Enhancement
+
+Abstract— The proliferation of hyper-realistic facial manipulation algorithms powered by Generative Adversarial Networks (GANs) and Diffusion models presents grave risks to digital media integrity, biometrics, and public trust. While existing deep learning detectors achieve near-perfect within-dataset accuracy (>97% AUC on pristine images), their performance collapses under cross-dataset domain shifts (falling to 50%–65% AUC) and severe lossy video compression (e.g., H.264 quantization at c40), which discards high-frequency manipulation cues. Furthermore, conventional frequency-based forensics relying on global Discrete Fourier (DFT) or Cosine Transforms (DCT) suffer from a spatial localization vacuum, rendering them ineffective on localized manipulations such as facial reenactments. To resolve these interrelated vulnerabilities, this Interim Technical Report (ITR) presents a novel Dual-Branch Spatio-Frequency Forensic Architecture. The proposed system decouples forensic feature extraction into: (1) a deep spatial representation branch capturing color, boundary, and blending anomalies, and (2) a multi-scale wavelet-packet frequency branch utilizing orthogonal Daubechies-4 filter banks to generate a 64-sub-band decomposition tree that preserves spatial coordinates while isolating directional high-frequency traces. To combat compression degradation, a learnable High-Frequency Enhancement (HiFE) residual block adaptively reconstructs attenuated coefficients. Spatial and spectral features are merged through a Dual Cross-Attention (DCA) module and regularized via binary cross-entropy with label smoothing. Comprehensive validation protocols on FaceForensics++ (raw, c23, c40) and Celeb-DF v2 establish explicit measurable targets: achieving >88.0% AUC under c40 compression and >80.0% cross-dataset AUC, while maintaining a strict stability standard deviation below 0.025 across 5 deterministic seeds.
+Index Terms— Deepfake detection, digital image forensics, multi-scale wavelet-packet decomposition, high-frequency enhancement, cross-dataset generalization, lossy compression resilience, dual cross-attention.
+I. PROBLEM FORMULATION & RESEARCH OBJECTIVES
+A. Motivation and Background
+Digital facial manipulation techniques, broadly classified under the umbrella term 'deepfakes', have evolved from crude academic experiments into accessible, photorealistic synthesis pipelines. Leveraging advanced deep generative models—such as Generative Adversarial Networks (StyleGAN2, StarGAN, FSGAN), Denoising Diffusion Probabilistic Models (DDPMs), and neural rendering frameworks (Face2Face, NeuralTextures)—malicious actors can convincingly alter identity, facial expressions, and spoken audio in digital media. The weaponization of this technology for political disinformation campaigns, non-consensual defamatory imagery, financial fraud, and identity spoofing presents an unprecedented crisis for public trust, evidence verification in legal contexts, and automated biometric security. Consequently, designing defensible, robust, and verifiable forensic countermeasures has become an urgent mandate in applied artificial intelligence.
+B. Technical Research Gaps in Contemporary Literature
+A rigorous synthesis of the state-of-the-art literature across 26 forensic studies reveals three fundamental architectural and theoretical bottlenecks that severely impair current deepfake detection systems:
+1) The Spatial Generalization Deficit (Domain Overfitting)
+The dominant deepfake detection paradigm utilizes deep convolutional neural networks (e.g., Xception, ResNet, EfficientNet) trained via binary cross-entropy on localized RGB frames. While these models report extraordinary classification scores (>98% AUC) when tested on intra-dataset test splits, empirical evaluations demonstrate that their accuracy plummets to near chance (50%–65% AUC) when deployed against unseen manipulation algorithms or new target identities (Lin et al., 2024; Kaddar et al., 2024). The root cause lies in the fact that supervised CNNs memorize low-level, dataset-specific RGB artifacts, color distribution shifts, and sensor noise patterns unique to a single generator, failing to learn invariant representations of manipulation.
+2) The Localization Vacuum of Global Frequency Forensics
+To overcome RGB color overfitting, researchers have increasingly investigated frequency-domain clues, exploiting the fact that up-sampling operations (e.g., transposed convolutions) leave periodic checkerboard artifacts across the spectrum (Frank et al., 2020; Dzanic et al., 2020). However, prevailing frequency detectors rely on global orthogonal transforms, specifically the Discrete Fourier Transform (DFT) and global Discrete Cosine Transform (DCT) (Qian et al., 2020). While effective at capturing global periodic spikes, global transforms completely discard spatial coordinates. As a result, global spectral methods suffer from a severe 'localization vacuum'—they cannot pinpoint where a forgery occurs and fail when manipulations are confined to localized regions (such as lip-syncing or expression transfer) or when faces are partially occluded.
+3) The Compression Collapse (Social Media Laundering)
+In practical distribution channels (social media feeds, messaging apps, video streaming), digital video undergoes aggressive lossy compression (e.g., H.264/MPEG-4 or H.265/HEVC at high quantization rates such as c40). Codec quantization acts as an aggressive low-pass filter that selectively discards imperceptible high-frequency transform coefficients. Consequently, passive forensic models whose decision boundaries depend on subtle spatial blending borders or unenhanced high-frequency spectral traces experience catastrophic failure, with AUC scores collapsing from >95% to 60%–70% (Gao et al., 2024; Dong et al., 2022).
+4) Lack of Reproducibility & Model Stability Benchmarking
+As highlighted in the Q1 Journal Guidelines and documented by Almestekawy et al. (2024), forensic literature exhibits a pervasive reproducibility crisis. Most published models report isolated peak accuracy figures while omitting stability evaluations across random weight initializations, leading to massive variance in performance when independent researchers attempt replication.
+
+PROBLEM SUMMARY: Core Research Problem: Contemporary detectors either overfit to spatial RGB textures (collapsing cross-dataset), discard spatial localization in global frequency transforms (DFT/DCT), or collapse entirely under lossy video compression (c40). A defensible detector must simultaneously preserve spatial coordinates, isolate high-frequency directional sub-bands, and adaptively reconstruct compressed coefficients.
+
+C. Formal Problem Statement
+Let an arbitrary suspect facial media asset be represented as a normalized digital image or extracted video frame tensor X in R^{H x W x C}, where H, W, and C denote the height, width, and color channels (C=3 for RGB), respectively. The input media may have undergone an unknown lossy compression transformation with quantization parameter Q_F in [0, 51]. The objective of the forensic classification system is to learn a parameterized mapping function F_theta: X -> y_hat in [0, 1] that estimates the posterior probability that X is manipulated (y_hat >= tau, where tau in (0, 1) is the operational decision threshold, typically set to 0.50), while maintaining robust generalizability across arbitrary manipulation generators G and resilience across severe quantization levels Q_F >= 40.
+D. Measurable Research Objectives
+To satisfy rigorous Q1 validation criteria, this thesis establishes four explicit, quantitatively measurable objectives:
+• Objective 1 (Compression Resilience): Achieve an AUC exceeding 88.0% on FaceForensics++ under severe c40 (heavy H.264) compression, outperforming standard Xception baselines by at least 6.0% (Gao et al., 2024).
+• Objective 2 (Cross-Dataset Generalizability): Attain an AUC exceeding 80.0% under strict cross-dataset evaluation on the Celeb-DF (v2) benchmark when trained exclusively on FaceForensics++ (HQ/c23), overcoming the domain-shift barrier (Kaddar et al., 2024).
+• Objective 3 (Spatial-Spectral Localization): Conserve 2D spatial coordinate mapping within the frequency domain by generating a 64-band Wavelet-Packet tree, achieving pixel-level forgery localization with an Intersection-over-Union (IoU) > 0.65 on spliced regions.
+• Objective 4 (Reproducibility & Stability Guarantee): Restrict the standard deviation of classification accuracy (sigma_Acc) to below 0.025 across five independent runs using deterministic Mersenne Twister seeds (s in {0, 1, 2, 3, 4}), satisfying Section 7 of the Q1 framing protocol.
+II. SYSTEMATIC LITERATURE REVIEW & THEORETICAL MATRIX
+Multimedia forensics has evolved across multiple distinct paradigms in response to advancing generative architectures. To ground the proposed system in peer-reviewed evidence, Table I synthesizes six seminal studies across nine standard analytical dimensions.
+
+Paper, Setting & Objective
+
+Sample & Datasets
+
+Methodology & Architecture
+
+Main Findings & Theoretical Core
+
+Key Limitations & Gaps
+
+
+Somoray & Miller (2023)James Cook Univ., AustraliaObj: Evaluate written visual strategies on human detection.
+
+
+N=454 human observers; 20 videos (10 real, 10 fake) sampled from DFDC dataset.
+
+
+Preregistered RCT comparing MIT Media Lab visual checklist (10 tips) vs. untrained control.
+
+
+Accuracy ~60.7% across both groups. Written tips do not improve accuracy due to Holistic Face Processing Theory.
+
+
+Laboratory setting lacks social media context; humans exhibit high confidence but low accuracy on individual media.
+
+
+Lin et al. (2024)Xi'an Jiaotong Univ., ChinaObj: Establish standardized benchmark for passive detectors.
+
+
+7 datasets (FF++, DFDC, Celeb-DF, ForgeryNet, etc.) + hard novel 'ID test' set.
+
+
+Unified re-implementation and cross-evaluation of 11 SOTA passive detectors under uniform protocols.
+
+
+All detectors collapse on unseen ID test set (AUC drops to 51%-60%). Overfitting to dataset-specific shortcuts exposed.
+
+
+High computational complexity; models too slow for real-time video stream verification.
+
+
+Dong et al. (2022)MEGVII & Xiamen Univ., ChinaObj: Interpret feature learning and improve compression robustness.
+
+
+FaceForensics++ (Raw, c23, c40) across 5 manipulation methods (Deepfakes, FaceSwap, Face2Face, etc.).
+
+
+FST-Matching theory; Shapley value interpretation; explicit feature-disentanglement network.
+
+
+Detectors rely on artifact concepts that degrade under compression. Disentanglement boosts c40 AUC to 91.27%.
+
+
+Slight performance gap on uncompressed (raw) media compared to baseline global representations.
+
+
+Wolter et al. (2022)Univ. of Bonn, GermanyObj: Spatial-frequency wavelet packets for forgery localization.
+
+
+FFHQ, CelebA, StyleGAN, StyleGAN2, and FaceForensics++ subsets.
+
+
+2D Wavelet Packet Decomposition (WPD) using Daubechies wavelets up to 3 levels (64 sub-bands).
+
+
+Conserves spatial coordinates while isolating high frequencies. Exposes periodic up-sampling checkerboards.
+
+
+Static wavelet filters fail under heavy lossy compression (c40) due to coefficient quantization.
+
+
+Haq et al. (2024)Oakland Univ., USAObj: Generalized training-free multimodal detection.
+
+
+Presidential Deepfakes (PDD, 32 clips) and World Leaders Dataset (WLD).
+
+
+Zero deepfake training; extracts audio/visual emotions (SER/FER); evaluates arousal-valence consistency.
+
+
+Achieved 93.7% accuracy on PDD without prior training; provides human-interpretable textual explanations.
+
+
+Dependent on baseline SER/FER classifier accuracy; ignores low-level pixel/spectral synthesis cues.
+
+
+Almestekawy et al. (2024)Cairo Univ., EgyptObj: Resolve reproducibility and stability bottlenecks.
+
+
+Celeb-DF, FaceForensics++, DeepfakeTIMIT, and FaceShifter.
+
+
+Siamese 3D CNN fusing GLCM texture features, LBPs, and spatiotemporal similarity metrics.
+
+
+Reduced classification variance across random seeds to standard deviation 0.016; high stability.
+
+
+High memory consumption and computational complexity; limited real-time deployment feasibility.
+
+III. PROPOSED DUAL-BRANCH FORENSIC METHODOLOGY
+To resolve the dual bottlenecks of domain-shift collapse and compression degradation, the proposed architecture separates feature learning into two specialized processing pipelines—Spatial Representation and Multi-Scale Wavelet-Packet Frequency—unified through an attention-driven cross-fusion module.
+A. Stage 1: Facial Acquisition, Alignment, and Normalization
+Given an input image or video frame sequence, the face region is localized using Multi-Task Cascaded Convolutional Networks (MTCNN) or RetinaFace. To ensure that subtle blending boundaries, color discontinuities, and hair-forehead transition seams are captured, the facial bounding box is expanded by a 20% margin (scale factor 1.2x). The cropped facial region is geometrically aligned using five facial landmarks (two eyes, nose tip, two mouth corners) and bilinearly interpolated into a canonical spatial dimension:
+
+
+X_0 = Normalize(BilinearCrop(X, BBox_expanded)) in R^{224 x 224 x 3}
+
+
+(1)
+
+where pixel intensities are normalized to the bounded range [-1.0, 1.0].
+B. Stage 2A: Deep Spatial Convolutional Representation Branch
+The spatial stream processes the three-channel RGB tensor X_0 through a modified Xception backbone. Traditional standard convolutions are replaced with depthwise separable convolutions to factorize spatial filtering from cross-channel correlation learning. This suppresses parameter bloat and prevents the network from memorizing facial identity features. The spatial feature representation is extracted at the exit flow module before final pooling:
+
+
+F_spa = G_spa(X_0; Theta_spa) in R^{C_s x H' x W'}
+
+
+(2)
+
+where H' = 14, W' = 14, and C_s = 728 channels. F_spa preserves spatial context, edge discontinuities, and boundary blending artifacts.
+C. Stage 2B: Multi-Scale Wavelet-Packet Frequency Branch
+To capture generator up-sampling traces without losing spatial coordinate indices, the frequency stream applies a 2D Discrete Wavelet Packet Transform (DWPT) directly to the normalized luminance channel Y_0 = 0.299R + 0.587G + 0.114B.
+1) Quadrature Mirror Filter Formulation: The signal is convolved with low-pass scaling filters h_L and high-pass wavelet filters h_H using Daubechies-4 (db4) orthogonal wavelets, yielding four directional sub-bands at each dyadic step:
+
+
+f_LL = h_L (x) h_L (Approx),  f_LH = h_L (x) h_H (Horiz),  f_HL = h_H (x) h_L (Vert),  f_HH = h_H (x) h_H (Diag)
+
+
+(3)
+
+2) Full 3-Level Decomposition Tree: Unlike the standard Discrete Wavelet Transform (DWT), which only recursively decomposes the low-frequency LL node, the Wavelet Packet Transform recursively decomposes all low- and high-frequency nodes up to scale Q = 3. At termination, the tree produces 4^3 = 64 equal-bandwidth spatial sub-bands:
+
+
+W_Q in R^{64 x (H/2^Q) x (W/2^Q)} = R^{64 x 28 x 28}
+
+
+(4)
+
+This formulation retains spatial grid coordinates (28 x 28) while providing an ultra-fine spectral decomposition that isolates high-frequency checkerboard artifacts across all directional orientations (Wolter et al., 2022).
+D. Stage 2C: Adaptive Learnable High-Frequency Enhancement (HiFE) Module
+Under heavy H.264 video compression (c40), the high-frequency sub-bands (LH, HL, HH) suffer severe coefficient attenuation. To restore these forensic cues, a learnable residual enhancement block is embedded into the wavelet branch. Directional sub-bands are passed through channel-attention gating and directional convolution blocks:
+
+
+W_gate = sigma( MLP(AvgPool(W_Q)) + MLP(MaxPool(W_Q)) )
+
+
+(5)
+
+
+
+W_enh = W_Q (*) W_gate + F_conv(W_Q)
+
+
+(6)
+
+where (*) denotes element-wise Hadamard multiplication. The enhanced wavelet tensor is projected through a stride-2 separable convolution layer to match the spatial branch grid, producing the enhanced frequency feature map F_freq in R^{256 x 14 x 14}.
+E. Stage 3: Dual Cross-Attention (DCA) Spatio-Frequency Fusion
+Rather than utilizing naive concatenation, spatial and spectral features interact through a Dual Cross-Attention (DCA) module. F_spa and F_freq are linearly mapped into Query, Key, and Value spaces:
+
+
+Q_spa = F_spa W_Q1,   K_freq = F_freq W_K1,   V_freq = F_freq W_V1
+
+
+(7)
+
+
+
+Q_freq = F_freq W_Q2,   K_spa = F_spa W_K2,   V_spa = F_spa W_V2
+
+
+(8)
+
+The cross-attention interactions are calculated as:
+
+
+A_{S->F} = Softmax( Q_spa K_freq^T / sqrt(d_k) ) V_freq
+
+
+(9)
+
+
+
+A_{F->S} = Softmax( Q_freq K_spa^T / sqrt(d_k) ) V_spa
+
+
+(10)
+
+The attended features are concatenated with residual skip connections and bottleneck-projected:
+
+
+F_fused = LayerNorm( Concat[A_{S->F}, A_{F->S}] W_P + F_spa ) in R^{984 x 14 x 14}
+
+
+(11)
+
+F. Stage 4: Classification Head & Optimization Objective
+The fused feature tensor F_fused is condensed via Global Average Pooling (GAP) into a 984-dimensional vector z. Vector z passes through a Multi-Layer Perceptron (MLP) comprising a dense layer (512 units), Batch Normalization, ReLU, Dropout (p = 0.5) for structural regularization, and a final linear projection with Sigmoid activation estimating manipulation probability y_hat:
+
+
+y_hat = sigma( W_c^T z + b_c ) in [0, 1]
+
+
+(12)
+
+The end-to-end framework is optimized using Binary Cross-Entropy with Label Smoothing (epsilon = 0.05):
+
+
+L_total = - (1/N) sum_{i=1}^N [ y_i^* log(y_hat_i) + (1 - y_i^*) log(1 - y_hat_i) ]
+
+
+(13)
+
+where y_i^* = y_i(1 - epsilon) + 0.5*epsilon. Label smoothing prevents the model from assigning overconfident probabilities to known artifacts, boosting cross-dataset generalization.
+IV. SYSTEM EXECUTION FLOWCHART & ARCHITECTURE
+Figure 1 provides a comprehensive operational flowchart of the proposed dual-branch spatio-frequency deepfake detector, illustrating intermediate tensor dimensions, data dependencies, and the decision path from raw input to forensic classification.
+
+
++-----------------------------------------------------------------------------------------+|                      INPUT STAGE: SUSPECT VIDEO FRAME OR DIGITAL IMAGE                  ||  - Extract frames at 15 fps via OpenCV / FFmpeg                                         ||  - Face Localization: MTCNN / RetinaFace 68 landmarks                                    ||  - Bounding Box Expansion: +20% margin to incorporate blending boundaries               ||  - Spatial Normalization: Crop and Bilinear Resize to canonical tensor X_0 (224x224x3)  |+-----------------------------------------------------------------------------------------+                                             |                     +-----------------------+-----------------------+                     |                                               |                     v (RGB Stream: 3x224x224)                       v (Luminance Stream: 1x224x224)+-----------------------------------------+     +-------------------------------------------------+|  BRANCH 1: DEEP SPATIAL CNN STREAM      |     |  BRANCH 2: MULTI-SCALE WAVELET-PACKET STREAM    ||  - Backbone: Separable Xception Network |     |  - Filter Bank: Orthogonal Daubechies (db4)     ||  - Depthwise separable convolutions     |     |  - 3-Level Recursive Tree (4^3 = 64 sub-bands)  ||  - Captures local boundary seams & edges|     |  - Preserves 2D coordinates: W_Q in 64x28x28    ||  - Output: F_spa in R^(728 x 14 x 14)   |     +-------------------------------------------------++-----------------------------------------+                              |                     |                                                   v                     |                          +-------------------------------------------------+                     |                          |  BRANCH 2C: HIGH-FREQUENCY ENHANCEMENT (HiFE)   |                     |                          |  - Directional grouping: LH, HL, HH details     |                     |                          |  - Channel-attention gating module              |                     |                          |  - Reconstructs c40 quantized coefficients      |                     |                          |  - Stride-2 projection: F_freq in 256x14x14     |                     |                          +-------------------------------------------------+                     +-----------------------+---------------------------+                                             |                                             v+-----------------------------------------------------------------------------------------+|               STAGE 3: DUAL CROSS-ATTENTION (DCA) SPATIO-FREQUENCY FUSION               ||  - Project Queries, Keys, Values: Q_spa, K_freq, V_freq & Q_freq, K_spa, V_spa           ||  - Compute Cross-Domain Attention: A_(S->F) and A_(F->S)                                ||  - LayerNorm & Bottleneck Linear Projection: F_fused in R^(984 x 14 x 14)               |+-----------------------------------------------------------------------------------------+                                             |                                             v+-----------------------------------------------------------------------------------------+|                   STAGE 4: CLASSIFICATION HEAD & FORENSIC METRIC POOLING                ||  - Global Average Pooling (GAP): Condense 14x14 grid into 984-D vector z                ||  - Dense Layer (512 units) -> Batch Normalization -> ReLU                               ||  - Dropout Layer (p = 0.5) for structural regularization                                ||  - Linear Output Unit with Sigmoid Activation: Compute y_hat in [0, 1]                  |+-----------------------------------------------------------------------------------------+                                             |                                             v                               +---------------------------+                               | Decision: y_hat >= 0.50 ? |                               +---------------------------+                                      /             \                            YES      /               \     NO                                    v                 v+---------------------------------------+   +---------------------------------------+| CLASSIFIED AS: MANIPULATED (DEEPFAKE) |   |  CLASSIFIED AS: AUTHENTIC (PRISTINE)  || - Spatial boundary seams localized    |   |  - Natural high-frequency rolloff     || - Wavelet checkerboard spikes detected|   |  - Consistent facial boundary textures|| - Attributed to generative upsampling |   |  - Symmetrical wavelet residuals      |+---------------------------------------+   +---------------------------------------+
+Fig. 1. End-to-end execution flowchart of the proposed Dual-Branch Spatio-Frequency Deepfake Detection Architecture.
+V. STATE-OF-THE-ART BASELINE REFERENCE MAPPING
+In strict accordance with Section 5 of the Q1 journal framing protocol ('Compare with State of the Art Fairly'), Table II compares the proposed framework against six seminal baseline architectures across domain input, analytical strategy, failure modes, and quantitative performance targets.
+
+Baseline Architecture
+
+Input Modality
+
+Methodological Strategy
+
+Primary Vulnerability / Failure Mode
+
+Target Metrics & Citations
+
+
+MesoNet (Meso-4)(Afchar et al., 2018)
+
+
+Spatial (RGB)
+
+
+Compact CNN mining mesoscopic compression & color anomalies.
+
+
+Fails completely under c40 compression & modern Diffusion/GAN synthesis.
+
+
+FF++ Raw: 84.7%c40 AUC: <58.0%Baseline comparison
+
+
+XceptionNet(Rossler et al., 2019)
+
+
+Spatial (RGB)
+
+
+Deep separable convolutions supervised via binary cross-entropy.
+
+
+Catastrophic cross-dataset generalization drop; fragile to c40 compression.
+
+
+FF++ c23: 95.7%Celeb-DF: 65.5%c40 AUC: 81.5%
+
+
+F^3-Net(Qian et al., 2020)
+
+
+Global Frequency (DCT)
+
+
+Frequency-aware image decomposition into low, mid, and high bands.
+
+
+Global DCT lacks spatial localization; blind to small regional face edits.
+
+
+FF++ c23: 97.5%Celeb-DF: 71.2%c40 AUC: 83.2%
+
+
+Wavelet-Packets (db4)(Wolter et al., 2022)
+
+
+Spatio-Frequency (WPD)
+
+
+3-Level orthogonal wavelet packet tree isolating 64 sub-bands.
+
+
+Static wavelet filters fail under heavy lossy compression (c40).
+
+
+FFHQ/StyleGAN: 98.2%FF++ c40: 82.1%Localization: High
+
+
+HiFE Network(Gao et al., 2024)
+
+
+Spatio-Frequency (DCT+DWT)
+
+
+Three-stream adaptive high-frequency reconstruction network.
+
+
+Computationally heavy multi-stream layout; lacks explicit 64-band packet tree.
+
+
+FF++ c40: 87.9%Celeb-DF: 74.5%Parameter count: 48M
+
+
+HCiT (CNN-ViT)(Kaddar et al., 2024)
+
+
+Spatial Hybrid (CNN+ViT)
+
+
+Combines local CNN feature maps with global ViT self-attention blocks.
+
+
+High computational complexity; ignores explicit frequency up-sampling traces.
+
+
+Celeb-DF: 73.9%DFDC: 68.2%Inference: >1.8s/frame
+
+
+Proposed Dual-Branch Framework (Team 14)
+
+
+Joint Spatio-Frequency (RGB + WPD + HiFE)
+
+
+Fuses deep spatial context with 64-band db4 wavelet-packets & HiFE residual block.
+
+
+Resolves both domain collapse and c40 degradation via dual cross-attention.
+
+
+FF++ c40: >88.0% (Target)Celeb-DF: >80.0% (Target)Stability sigma: <0.025
+
+VI. EXPERIMENTAL SETUP & REPRODUCIBILITY GUARANTEE
+A. Dataset Partitioning & Benchmark Suites
+The framework will be evaluated across three benchmark datasets representing diverse generation methods, resolutions, and quality regimes: (1) FaceForensics++ (FF++), comprising 1,000 video sequences manipulated via five distinct algorithms (Deepfakes, Face2Face, FaceSwap, NeuralTextures, FaceShifter) evaluated across three compression levels: raw (uncompressed), c23 (light H.264 compression), and c40 (heavy compression); (2) Celeb-DF (v2), containing 5,639 high-quality videos exhibiting minimal visual artifacts, serving as the primary cross-dataset generalization benchmark; and (3) Deepfake Detection Challenge (DFDC), providing unconstrained real-world media featuring complex lighting, pose variations, and camera motions.
+B. Implementation Environment & Optimization Parameters
+• Software & Hardware: PyTorch 2.2 with CUDA 12.1 and Torchvision on an dual-NVIDIA RTX GPU cluster (24GB VRAM per node).• Optimizer & Schedule: AdamW optimizer (initial learning rate eta = 1e-4, weight decay lambda = 1e-5), regulated via a Cosine Annealing learning rate schedule decaying to 1e-6 over 50 epochs with a mini-batch size of 32.• Data Augmentations: Random horizontal flipping (p = 0.5), mild Gaussian blurring (sigma in [0.1, 1.2]), JPEG compression re-encoding (Q in [50, 95]), and random brightness-contrast adjustments (+/- 15%).
+C. Deterministic Seeding & Stability Protocol
+To satisfy Section 7 of the Q1 framing protocol ('Reproducibility: Keep the Evidence, Not Only the Final Paper') and address the stability concerns raised by Almestekawy et al. (2024), all pseudo-random number generators (PyTorch, NumPy, Python standard random, CUDA CUDNN backend) will be deterministically seeded using five distinct Mersenne Twister seeds: s in {0, 1, 2, 3, 4}. In accordance with best practices, all reported metrics will present the mean and standard deviation across these five independent runs. A run is verified only if sigma_Acc < 0.025.
+D. Quantitative Evaluation Metrics
+System effectiveness will be assessed using four standard forensic evaluation metrics: (1) Area Under the Receiver Operating Characteristic Curve (AUC-ROC), reflecting classification threshold-agnostic performance; (2) Detection Accuracy (ACC) at optimal operating threshold tau = 0.50; (3) Equal Error Rate (EER), the operating point where False Acceptance Rate (FAR) equals False Rejection Rate (FRR); and (4) F1-Score, the harmonic mean of Precision and Recall on manipulated media samples.
+VII. PROJECT TIMELINE, WORK BREAKDOWN & RISK MITIGATION
+The project execution is organized into four sequential, verifiable phases across the academic term, accompanied by proactive technical risk mitigation strategies.
+
+Phase & Term
+
+Milestone Deliverables
+
+Core Technical Tasks
+
+Validation Criteria
+
+
+Phase 1Weeks 1–3
+
+
+Data Pipeline & Baseline Setup
+
+
+Preprocess FF++ (raw, c23, c40) and Celeb-DF v2. Implement MTCNN face cropping with 1.2x margin. Replicate baseline Xception and MesoNet.
+
+
+Verified data pipeline; reproducible Xception baseline matching published FF++ AUC within +/-0.8%.
+
+
+Phase 2Weeks 4–7
+
+
+Wavelet & HiFE Module Implementation
+
+
+Construct 3-level Daubechies-4 wavelet-packet decomposition tree (64 sub-bands). Integrate learnable high-frequency enhancement (HiFE) residual block.
+
+
+Unit tests confirming 100% mathematical reversibility of wavelet packets; HiFE parameter convergence.
+
+
+Phase 3Weeks 8–11
+
+
+Cross-Attention Fusion & Full Network Training
+
+
+Implement Dual Cross-Attention (DCA) module. Train end-to-end network on FF++ c23 with label smoothing across seeds 0–4. Run ablation studies on fusion layers.
+
+
+Training convergence without gradient explosion; stability metric sigma_Acc < 0.025 across all 5 seeds.
+
+
+Phase 4Weeks 12–14
+
+
+Cross-Dataset Benchmarking & Manuscript Finalization
+
+
+Execute evaluations on FF++ c40 and Celeb-DF v2. Generate Grad-CAM frequency saliency maps. Compile final dissertation report.
+
+
+Target metrics achieved: c40 AUC > 88.0%, Celeb-DF AUC > 80.0%. Submission of final Q1 manuscript.
+
+Technical Risk Assessment and Fallback Procedures
+• Risk 1 (High GPU Memory Consumption in 64-Sub-band Tree): If computing full 64 sub-bands causes GPU out-of-memory errors during DCA cross-attention, sub-bands will be grouped into 16 directional macro-clusters via average pooling before cross-attention, reducing attention matrix memory from O(N^2) by 75% while preserving orientation traces.• Risk 2 (Over-smoothing in Severe c40 Quantization): If heavy c40 compression completely eliminates high frequencies, the HiFE module will be augmented with an auxiliary frequency loss term (L_freq) penalizing spectral divergence against c23 ground-truth features, actively enforcing high-frequency reconstruction.• Risk 3 (Cross-Dataset Landmark Alignment Failure): In the event of facial landmark detection failure on extreme poses in DFDC, a spatial bounding-box fallback mechanism utilizing YOLOv8-Face will be deployed to ensure zero dropped frames.
+VIII. REFERENCES
+[1] A. Almestekawy, H. H. Zayed, and A. Taha, "Deepfake detection: Enhancing performance with spatiotemporal texture and deep learning feature fusion," Egyptian Informatics Journal, vol. 27, p. 100535, Sep. 2024. doi: 10.1016/j.eij.2024.100535.
+[2] D. Afchar, V. Nozick, J. Yamagishi, and I. Echizen, "MesoNet: a compact facial video forgery detection network," in 2018 IEEE International Workshop on Information Forensics and Security (WIFS), 2018, pp. 1–7. doi: 10.1109/WIFS.2018.8630761.
+[3] A. Rossler, D. Cozzolino, L. Verdoliva, C. Riess, J. Thies, and M. Nießner, "FaceForensics++: Learning to detect manipulated facial images," in Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), 2019, pp. 1–11.
+[4] Y. Li, X. Yang, P. Sun, H. Qi, and S. Lyu, "Celeb-DF: A large-scale challenging dataset for deepfake forensics," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2020, pp. 3207–3216.
+[5] B. Dolhansky, J. Bitton, B. Pflaum, J. Lu, R. Howes, M. Wang, and C. C. Ferrer, "The DeepFake Detection Challenge (DFDC) dataset," arXiv preprint arXiv:2006.07397, 2020.
+[6] S. Dong, J. Wang, R. Ji, J. Liang, H. Fan, and Z. Ge, "Implicit identity leakage: The stumbling block to improving deepfake detection generalization," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2023, pp. 3994–4004.
+[7] M. Wolter, F. Blanke, R. Heese, and J. Garcke, "Wavelet-packets for deepfake image analysis and detection," Machine Learning, vol. 111, no. 11, pp. 4295–4327, Nov. 2022. doi: 10.1007/s10994-022-06225-5.
+[8] J. Gao, Z. Xia, G. L. Marcialis, C. Dang, J. Dai, and X. Feng, "Deepfake detection based on high-frequency enhancement network for highly compressed content," Expert Systems with Applications, vol. 249, p. 123732, Sep. 2024. doi: 10.1016/j.eswa.2024.123732.
+[9] I. U. Haq, K. M. Malik, and K. Muhammad, "Multimodal Neurosymbolic Approach for Explainable Deepfake Detection," ACM Transactions on Multimedia Computing, Communications, and Applications, vol. 20, no. 11, pp. 1–16, Nov. 2024. doi: 10.1145/3624748.
+[10] A. V. Nadimpalli and A. Rattani, "ProActive DeepFake Detection using GAN-based Visible Watermarking," ACM Transactions on Multimedia Computing, Communications, and Applications, vol. 20, no. 11, pp. 1–27, Nov. 2024. doi: 10.1145/3625547.
+[11] B. Kaddar, S. A. Fezza, W. Hamidouche, Z. Akhtar, and A. Hadid, "Deepfake Detection Using Spatiotemporal Transformer," ACM Transactions on Multimedia Computing, Communications, and Applications, vol. 20, no. 11, Article 345, Sep. 2024. doi: 10.1145/3643030.
+[12] S. Fang, Z. Zhang, and B. Song, "Deepfake Detection Model Combining Texture Differences and Frequency Domain Information," ACM Transactions on Privacy and Security, vol. 28, no. 2, Article 21, Feb. 2025. doi: 10.1145/3706636.
+[13] G. Naskar, S. Mohiuddin, S. Malakar, E. Cuevas, and R. Sarkar, "Deepfake detection using deep feature stacking and meta-learning," Heliyon, vol. 10, no. 7, p. e25933, Apr. 2024. doi: 10.1016/j.heliyon.2024.e25933.
+[14] B. Yan, C.-T. Li, and X. Lu, "JRC: Deepfake detection via joint reconstruction and classification," Neurocomputing, vol. 598, p. 127862, Sep. 2024. doi: 10.1016/j.neucom.2024.127862.
+[15] K. Somoray and D. J. Miller, "Providing detection strategies to improve human detection of deepfakes: An experimental study," Computers in Human Behavior, vol. 149, p. 107917, Dec. 2023. doi: 10.1016/j.chb.2023.107917.
+[16] J. Frank, T. Eisenhofer, L. Schönherr, A. Fischer, D. Kolossa, and T. Holz, "Leveraging frequency analysis for deep fake image recognition," in Proceedings of the International Conference on Machine Learning (ICML), 2020, pp. 3247–3258.
+[17] Y. Qian, G. Yin, L. Sheng, Z. Chen, and J. Shao, "Thinking in frequency: Face forgery detection by mining frequency-aware clues," in Proceedings of the European Conference on Computer Vision (ECCV), 2020, pp. 86–103.
+[18] T. Dzanic, K. Shah, and F. Witherden, "Fourier spectrum discrepancies in deep network generated images," in Advances in Neural Information Processing Systems (NeurIPS), vol. 33, 2020, pp. 3022–3032.
+[19] R. Durall, M. Keuper, and J. Keuper, "Watch your up-convolution: CNN based generative deep neural networks are failing to reproduce spectral distributions," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2020, pp. 7890–7899.
+[20] J. Hernandez-Ortega, R. Tolosana, J. Fierrez, and A. Morales, "DeepFakesON-Phys: Deepfakes detection based on heart rate estimation," in Proceedings of the AAAI Conference on Artificial Intelligence Workshops, 2021, pp. 1–8.
+[21] U. A. Ciftci, I. Demir, and L. Yin, "FakeCatcher: Detection of synthetic portrait videos using biological signals," IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 44, no. 10, pp. 6340–6352, Oct. 2022. doi: 10.1109/TPAMI.2020.3009287.
+[22] Y. Li, M.-C. Chang, and S. Lyu, "In ictu oculi: Exposing AI created fake videos by detecting eye blinking," in 2018 IEEE International Workshop on Information Forensics and Security (WIFS), 2018, pp. 1–7. doi: 10.1109/WIFS.2018.8630787.
+[23] Y. Li and S. Lyu, "Exposing deepfake videos by detecting face warping artifacts," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (CVPRW), 2019, pp. 46–52.
+[24] F. Chollet, "Xception: Deep learning with depthwise separable convolutions," in Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2017, pp. 1251–1258.
+[25] H. T. Sencar, L. Verdoliva, and N. Memon, Eds., Multimedia Forensics. Singapore: Springer Nature, 2022. doi: 10.1007/978-981-16-7621-5.
+[26] C. Rathgeb, R. Tolosana, R. Vera-Rodriguez, and C. Busch, Eds., Handbook of Digital Face Manipulation and Detection: From DeepFakes to Morphing Attacks. Cham: Springer International Publishing, 2022. doi: 10.1007/978-3-030-87664-7.
+[27] T. Karras, S. Laine, and T. Aila, "A style-based generator architecture for generative adversarial networks," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2019, pp. 4401–4410.
+[28] L. Jiang, R. Li, W. Wu, C. Qian, and C. C. Loy, "DeeperForensics-1.0: A large-scale dataset for real-world face forgery detection," in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2020, pp. 2889–2898.
+[29] M. Groh, Z. Epstein, C. Firestone, and R. Picard, "Deepfake detection by human crowds, machines, and machine-informed crowds," Proceedings of the National Academy of Sciences, vol. 119, no. 1, p. e2110013119, Jan. 2022. doi: 10.1073/pnas.2110013119.
+[30] H. Hao, E. R. Bartusiak, D. Güera, D. M. Montserrat, S. Baireddy, Z. Xiang, S. K. Yarlagadda, R. Shao, J. Horváth, J. Yang, F. Zhu, and E. J. Delp, "Deepfake detection using multiple data modalities," in Handbook of Digital Face Manipulation and Detection, Springer, 2022, pp. 235–254.
